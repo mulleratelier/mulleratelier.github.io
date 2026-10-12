@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Müller Atelier — Simulador de precificação</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Karla:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#FAF6F0;--card:#FFFDF9;--cream:#F2E9DB;--beige:#DCC9AE;--line:#E7DBC9;--brown:#7A5236;--cocoa:#3A2618;--muted:#7D6A5B;
+ --ok:#4B7A47;--okbg:#E7F0E2;--warn:#9A6E12;--warnbg:#FBF0D6;--bad:#A23A2E;--badbg:#F8E3DF;
+ --serif:"Cormorant Garamond",Garamond,"Times New Roman",serif;--sans:Karla,"Segoe UI",system-ui,sans-serif;
+ box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1C1511;--card:#261D17;--cream:#30251D;--beige:#5A4635;--line:#3B2E24;--brown:#D7AE86;--cocoa:#F3E7D7;--muted:#B39F8C;
+ --ok:#8FC183;--okbg:#22301F;--warn:#E3B95A;--warnbg:#3A2F17;--bad:#EE8C7E;--badbg:#3C201B;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#1C1511;--card:#261D17;--cream:#30251D;--beige:#5A4635;--line:#3B2E24;--brown:#D7AE86;--cocoa:#F3E7D7;--muted:#B39F8C;
+ --ok:#8FC183;--okbg:#22301F;--warn:#E3B95A;--warnbg:#3A2F17;--bad:#EE8C7E;--badbg:#3C201B;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--cocoa);font:16px/1.5 var(--sans);-webkit-text-size-adjust:100%}
+header{max-width:1180px;margin:0 auto;padding:28px 20px 8px;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.brand h1{font:600 clamp(2rem,6vw,2.9rem)/1 var(--serif);margin:0;letter-spacing:.01em}
+.brand p{margin:6px 0 0;color:var(--muted);font-size:.95rem}
+.brand h1::after{content:"";display:block;width:132px;margin-top:10px;border-top:2px dashed var(--brown);opacity:.7}
+#saveState{font-size:.82rem;color:var(--muted)}
+nav{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top,0px)}
+nav div{max-width:1180px;margin:0 auto;padding:0 12px;display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+nav button{flex:0 0 auto;background:none;border:0;padding:14px 12px 12px;font:500 .98rem var(--sans);color:var(--muted);border-bottom:2px solid transparent;cursor:pointer}
+nav button[aria-current="page"]{color:var(--cocoa);border-bottom-color:var(--brown)}
+main{max-width:1180px;margin:0 auto;padding:18px 16px 60px}
+h2{font:600 1.45rem/1.2 var(--serif);margin:0 0 12px}
+h3{font:700 .9rem/1.3 var(--sans);margin:22px 0 10px;color:var(--brown)}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px}
+.split{display:grid;gap:16px;grid-template-columns:1fr}
+@media (min-width:900px){.split{grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);align-items:start}.results{position:sticky;top:64px;max-height:calc(100vh - 80px);overflow:auto;padding-bottom:4px}}
+.results>.panel:last-child{margin-bottom:0}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (min-width:640px){.g4{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.fld{display:flex;flex-direction:column;gap:4px;min-width:0}.fld.wide{flex:1}
+.fld>span{font-size:.84rem;color:var(--muted);font-weight:500}
+.fld small{font-size:.76rem;color:var(--muted);line-height:1.3}
+.inwrap{display:flex;align-items:center;background:var(--bg);border:1px solid var(--beige);border-radius:9px;overflow:hidden}
+.inwrap:focus-within{border-color:var(--brown);box-shadow:0 0 0 3px color-mix(in srgb,var(--brown) 18%,transparent)}
+.inwrap i{font-style:normal;color:var(--muted);font-size:.85rem;padding:0 8px}
+.inwrap i:first-child{padding-right:0}
+input,select{font:16px var(--sans);color:var(--cocoa)}
+.inwrap input{flex:1;min-width:0;border:0;background:transparent;padding:10px;outline:none}
+select{width:100%;padding:10px;border:1px solid var(--beige);border-radius:9px;background:var(--bg)}
+select:focus-visible,button:focus-visible,input[type=radio]:focus-visible,input[type=checkbox]:focus-visible{outline:2px solid var(--brown);outline-offset:2px}
+.itemrow{display:grid;grid-template-columns:1fr 64px auto 36px;gap:8px;align-items:center;margin-bottom:8px}
+.itemrow input{padding:10px;border:1px solid var(--beige);border-radius:9px;background:var(--bg);width:100%;text-align:center}
+.itemrow .x{font-size:.85rem;color:var(--muted)}
+.icon{width:36px;height:36px;border-radius:9px;border:1px solid var(--line);background:none;color:var(--muted);cursor:pointer}
+.btn{background:var(--brown);color:var(--card);border:1px solid var(--brown);border-radius:999px;padding:10px 18px;font:700 .92rem var(--sans);cursor:pointer}
+.btn.ghost{background:none;color:var(--brown)}.btn.sm{padding:7px 14px;font-size:.86rem}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.link{background:none;border:0;color:var(--brown);font:500 .88rem var(--sans);cursor:pointer;padding:6px;text-decoration:underline;text-underline-offset:3px}
+.link.danger{color:var(--bad)}
+.btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 14px;scrollbar-width:thin}
+.chip{flex:0 0 auto;border:1px solid var(--beige);background:var(--card);color:var(--cocoa);border-radius:999px;padding:8px 14px;font:500 .9rem var(--sans);cursor:pointer}
+.chip.on{background:var(--cocoa);color:var(--bg);border-color:var(--cocoa)}
+.chip.add{border-style:dashed;color:var(--brown)}
+.phead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.phead.top{align-items:center;margin-bottom:14px;flex-wrap:wrap}.lead{margin:0;color:var(--muted);max-width:60ch}
+.phead .fld{flex:1}.phead .link{margin-top:22px}.acts{display:flex}
+.kv{display:grid;grid-template-columns:1fr auto;gap:6px 12px;margin:0}
+.kv dt{color:var(--muted)}.kv dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+.kv .b{color:var(--cocoa);font-weight:700}.kv dt.b{border-top:1px solid var(--line);padding-top:6px}.kv dd.b{border-top:1px solid var(--line);padding-top:6px}
+.kv.sm{font-size:.88rem}
+.pos{color:var(--ok)!important}.neg{color:var(--bad)!important}
+.plist{display:flex;flex-direction:column}
+.prow{display:flex;justify-content:space-between;align-items:center;gap:10px;background:none;border:0;border-top:1px solid var(--line);padding:11px 6px;text-align:left;cursor:pointer;color:var(--cocoa);font:inherit}
+.prow:first-child{border-top:0}
+.prow.on{background:var(--cream);border-radius:9px}
+.prow.on+.prow{border-top-color:transparent}
+.pn{font-weight:500}.pn em{display:block;font-style:normal;font-size:.76rem;color:var(--warn)}
+.pv{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}.pv small{display:block;font-weight:400;color:var(--muted);font-size:.78rem}
+.sumtitle{font-size:1.3rem;margin-bottom:2px}.sub{margin:0 0 16px;color:var(--muted);font-size:.9rem}
+/* o elemento memorável: o preço emoldurado em ponto atrás */
+.hero{position:relative;background:var(--cream);border-radius:14px;padding:22px 18px 18px;margin-bottom:16px;text-align:center}
+.hero::before{content:"";position:absolute;inset:7px;border:2px dashed var(--brown);border-radius:10px;opacity:.55;pointer-events:none}
+.hero span{display:block;font-size:.88rem;color:var(--muted)}
+.hero strong{display:block;font:700 clamp(2.4rem,9vw,3.3rem)/1.05 var(--serif);margin:4px 0;font-variant-numeric:lining-nums tabular-nums}
+.hero .hsub{font-size:.88rem}
+.ppl{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.pcard{border:1px solid var(--line);border-radius:12px;padding:12px}
+.pcard b{display:block;margin-bottom:6px}
+.ptot{font:700 1.6rem/1.1 var(--serif);margin-top:8px;text-align:right;font-variant-numeric:tabular-nums}
+.scen{border-top:1px dashed var(--beige);margin-top:18px;padding-top:4px}
+.shead{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.badge{display:inline-block;font-size:.76rem;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.badge.ok{background:var(--okbg);color:var(--ok)}.badge.below,.badge.even{background:var(--warnbg);color:var(--warn)}.badge.loss{background:var(--badbg);color:var(--bad)}
+.alert{border-radius:9px;padding:9px 12px;font-size:.9rem;margin:8px 0}
+.alert.ok{background:var(--okbg);color:var(--ok)}.alert.below{background:var(--warnbg);color:var(--warn)}.alert.loss{background:var(--badbg);color:var(--bad)}
+.note{font-size:.86rem;color:var(--muted);margin:10px 0 0}
+.note.warn{background:var(--warnbg);color:var(--warn);padding:9px 12px;border-radius:9px;margin:0 0 14px}
+.psum{margin:14px 0 0;font-size:.9rem;color:var(--muted);border-top:1px dashed var(--beige);padding-top:10px}.psum b{color:var(--cocoa)}
+.seg{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.seg label{display:flex;gap:8px;align-items:center;border:1px solid var(--beige);border-radius:9px;padding:9px 12px;cursor:pointer;font-size:.92rem}
+.seg.col{flex-direction:column}.seg.col label{align-items:flex-start;flex-wrap:wrap}.seg.col label input{margin-top:5px}
+.seg.col small{flex-basis:100%;padding-left:24px;color:var(--muted);font-size:.84rem;line-height:1.35}
+.seg label:has(input:checked){border-color:var(--brown);background:var(--cream)}
+input[type=radio],input[type=checkbox]{accent-color:var(--brown);width:16px;height:16px}
+.chk{display:flex;gap:8px;align-items:center;margin-top:12px;font-size:.9rem}
+.person{border-top:1px solid var(--line);padding:12px 0}
+.baks{list-style:none;padding:0;margin:8px 0 0}.baks li{display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid var(--line);padding:7px 0}.baks small{display:block;color:var(--muted);font-size:.78rem}
+label.btn{display:inline-block}
+table.bands{border-collapse:collapse;width:100%;min-width:520px;margin-bottom:10px}
+.bands th{font-size:.8rem;color:var(--muted);font-weight:500;text-align:left;padding:0 6px 6px 0}
+.bands td{padding:0 6px 8px 0}.bands input:disabled{opacity:.6}
+textarea{font:15px/1.4 var(--sans);color:var(--cocoa);background:var(--bg);border:1px solid var(--beige);border-radius:9px;padding:10px;width:100%;resize:vertical;margin-bottom:6px}
+.tablewrap{overflow-x:auto;margin-top:14px}
+table.cmp{border-collapse:collapse;width:100%;min-width:480px;font-size:.88rem;font-variant-numeric:tabular-nums}
+.cmp th,.cmp td{padding:8px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+.cmp tbody th{text-align:left;color:var(--muted);font-weight:500}
+.cmp thead th{font:600 1.05rem var(--serif);color:var(--cocoa)}
+.empty{text-align:center;padding:40px 16px;border:2px dashed var(--beige);border-radius:14px;margin-bottom:16px}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);opacity:0;background:var(--cocoa);color:var(--bg);padding:10px 18px;border-radius:999px;font-size:.9rem;transition:.2s;pointer-events:none}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+@media (max-width:420px){.panel{padding:15px}.grid{gap:10px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media print{body{background:#fff;color:#000}header,nav,.chips,.panel.form,.panel.comp,.noprint,#toast,.results>.panel:not(.summary){display:none!important}
+ main,.split{display:block;padding:0;max-width:none}.results{position:static;max-height:none;overflow:visible}.panel{border:0;padding:0}}
+</style></head><body>
+<header><div class="brand"><h1>Müller Atelier</h1><p>Simulador de precificação de bordados, kits e presentes</p></div><span id="saveState"></span></header>
+<nav aria-label="Seções"><div><button data-tab="kits">Kits e preços</button><button data-tab="products">Produtos</button><button data-tab="platforms">Plataformas</button><button data-tab="team">Ajustes e backup</button></div></nav>
+<main id="view"></main><div id="toast" role="status" aria-live="polite"></div>
+<script>
+// ===== Núcleo de cálculo (puro, testável) =====
+function num(v){ if(v===null||v===undefined) return 0; const n=parseFloat(String(v).replace(/\./g,(m,i,s)=>s.includes(',')?'':m).replace(',','.')); return isFinite(n)?n:0; }
+function round2(v){ return Math.round((v+Number.EPSILON)*100)/100; }
+function ceilCent(v){ return Math.ceil(v*100-1e-7)/100; }
+
+function kitCosts(kit, products, S){
+  let qty=0, mat=0, varOther=0, minutes=0; const lines=[];
+  for(const it of kit.items){
+    const p=products.find(x=>x.id===it.pid); if(!p) continue;
+    const q=Math.max(0,num(it.qty)); if(!q) continue;
+    qty+=q; mat+=q*num(p.material); varOther+=q*num(p.other);
+    minutes+=q*(num(p.bordado)+num(p.costura)+num(p.extraMin));
+    lines.push({name:p.name,q});
+  }
+  minutes+=Math.max(0,num(kit.prep));
+  const hours=minutes/60, people=S.people;
+  let laborByPerson, labor;
+  if(S.laborMode==='B'){
+    laborByPerson=people.map(p=>hours*Math.max(0,num(p.timePct))/100*Math.max(0,num(p.rate)));
+    labor=laborByPerson.reduce((a,b)=>a+b,0);
+  } else {
+    labor=hours*Math.max(0,num(S.rate));
+    laborByPerson=people.map(()=>people.length?labor/people.length:0);
+  }
+  const pack=Math.max(0,num(kit.packaging)), orderOther=Math.max(0,num(kit.otherCost));
+  const base=mat+pack+varOther+orderOther+labor;
+  return {qty,mat,pack,varOther,orderOther,other:varOther+orderOther,minutes,hours,labor,laborByPerson,base,lines,bill:Math.max(1,Math.round(num(kit.billable)||1))};
+}
+
+// Faixas de preço: a faixa vale quando o preço de cada item cobrado (P ÷ itens) é >= "min".
+function bandsOf(pf){
+  const raw=(pf.bands&&pf.bands.length)?pf.bands:[{min:0,pct:0,item:0,ship:0}];
+  const b=raw.map(x=>({min:Math.max(0,num(x.min)),pct:num(x.pct),item:num(x.item),ship:num(x.ship)})).sort((x,y)=>x.min-y.min);
+  b[0].min=0; return b;
+}
+function bandIndex(P,B,bill){ const u=P/bill; let k=0; for(let i=0;i<B.length;i++) if(u+1e-9>=B[i].min) k=i; return k; }
+// Taxas de uma venda ao preço P. force = {band, cap, pcap} fixa o regime (usado pelo solver).
+function fees(P, pf, bill, force){
+  const B=bandsOf(pf), k=force?force.band:bandIndex(P,B,bill), band=B[k];
+  const pctBase=P+(pf.freightInBase?num(pf.freightBuyer):0);
+  let comm=pctBase*band.pct/100; const capT=num(pf.cap)*bill;
+  const useCap=force?force.cap:(num(pf.cap)>0&&comm>capT);
+  let capped=false; if(num(pf.cap)>0&&useCap){ comm=capT; capped=true; }
+  let promo=pctBase*num(pf.pctPromo)/100; const pcapT=num(pf.promoCap)*bill;
+  const usePcap=force?force.pcap:(num(pf.promoCap)>0&&promo>pcapT);
+  if(num(pf.promoCap)>0&&usePcap) promo=pcapT;
+  const service=pctBase*num(pf.pctService)/100;
+  const platform=comm+service+promo+band.item*bill+num(pf.perOrder)+num(pf.perItem)*bill+num(pf.logistics);
+  const ads=pf.adsMode==='fix'?num(pf.ads):P*num(pf.ads)/100;
+  const tax=P*num(pf.taxPct)/100+num(pf.taxFixed);
+  const freight=band.ship+num(pf.freightSeller)-num(pf.subsidy);
+  const other=num(pf.otherFixed);
+  return {comm,platform,ads,tax,freight,other,total:platform+ads+tax+freight+other,capped,band:k,bandMin:band.min};
+}
+
+// Menor preço (em centavos) com lucro >= m * P. Avalia cada regime (faixa, teto) e as fronteiras. null = sem solução.
+function solvePrice(base, pf, bill, m){
+  const g=(P,f)=>P-base-fees(P,pf,bill,f).total-m*P;
+  const B=bandsOf(pf), F=pf.freightInBase?num(pf.freightBuyer):0, cands=[];
+  B.forEach((band,k)=>{
+    if(k>0) cands.push(band.min*bill);
+    if(num(pf.cap)>0&&band.pct>0) cands.push(num(pf.cap)*bill/(band.pct/100)-F);
+    for(const cap of [false,true]) for(const pcap of [false,true]){
+      const f={band:k,cap,pcap}, a=g(0,f), sl=g(1,f)-a;
+      if(sl>1e-12) cands.push(-a/sl);
+    }
+  });
+  if(num(pf.promoCap)>0&&num(pf.pctPromo)>0) cands.push(num(pf.promoCap)*bill/(num(pf.pctPromo)/100)-F);
+  let best=null;
+  for(const c of cands){
+    if(!(c>0)||!isFinite(c)) continue;
+    let P=ceilCent(c);
+    for(let i=0;i<5;i++){ if(g(P)>=-1e-9){ if(best===null||P<best) best=P; break; } P=round2(P+0.01); }
+  }
+  return best;
+}
+
+function evaluate(P, kc, pf, S){
+  const f=fees(P,pf,kc.bill);
+  const total=kc.base+f.total, profit=P-total, margin=P>0?profit/P:0, target=num(S.margin)/100;
+  let status;
+  if(Math.abs(profit)<0.005) status='even';
+  else if(profit<0) status='loss';
+  else if(margin+1e-9<target) status='below';
+  else status='ok';
+  const reserve=profit>0?profit*Math.max(0,num(S.reserve))/100:0, dist=profit-reserve;
+  const n=S.people.length;
+  const shares=S.people.map(p=>S.splitMode==='custom'?dist*num(p.share)/100:(n?dist/n:0));
+  const persons=S.people.map((p,i)=>({name:p.name,labor:kc.laborByPerson[i]||0,share:shares[i],total:(kc.laborByPerson[i]||0)+shares[i]}));
+  return {P,f,total,profit,margin,status,reserve,dist,persons,perUnit:kc.qty?P/kc.qty:0};
+}
+
+function priceKit(kit, products, pf, S){
+  const kc=kitCosts(kit,products,S);
+  const m=num(S.margin)/100;
+  const res={kc,minP:null,recP:null,err:null};
+  if(!kc.qty){ res.err='Adicione pelo menos um produto com quantidade maior que zero.'; return res; }
+  res.minP=solvePrice(kc.base,pf,kc.bill,0);
+  if(res.minP===null){ res.err='As taxas percentuais somam 100% ou mais: não existe preço que cubra os custos.'; return res; }
+  if(m>=1){ res.err='A margem desejada precisa ser menor que 100%.'; }
+  else { res.recP=solvePrice(kc.base,pf,kc.bill,m); if(res.recP===null) res.err='Taxas + margem desejada chegam a 100% ou mais: reduza a margem ou as taxas.'; }
+  res.min=evaluate(res.minP,kc,pf,S);
+  if(res.recP!==null){
+    res.rec=evaluate(res.recP,kc,pf,S);
+    const d=Math.min(100,Math.max(0,num(kit.discount)));
+    if(d>0){ res.discP=round2(res.recP*(1-d/100)); res.disc=evaluate(res.discP,kc,pf,S); }
+  }
+  if(num(kit.testPrice)>0) res.test=evaluate(round2(num(kit.testPrice)),kc,pf,S);
+  return res;
+}
+// ===== Interface =====
+const uid=()=>Math.random().toString(36).slice(2,9);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const BRL=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
+const brl=v=>BRL.format(round2(v||0)).replace(/^-?/,m=>m);
+const pct=v=>(v*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';
+const hm=min=>{const h=Math.floor(min/60),m=Math.round(min-h*60);return (h?h+' h ':'')+(m||!h?m+' min':'').trim();};
+
+function blankPlatform(name){return {id:uid(),name,bands:[{min:0,pct:0,item:0,ship:0}],pctService:0,pctPromo:0,promoCap:0,cap:0,perOrder:0,perItem:0,logistics:0,freightSeller:0,subsidy:0,freightBuyer:0,freightInBase:false,adsMode:'pct',ads:0,taxPct:0,taxFixed:0,otherFixed:0,note:''};}
+// Taxas pesquisadas em outubro de 2026 (fontes públicas; confira sempre na Central do Vendedor)
+function researchedPlatforms(){
+  const P=(name,o)=>({...blankPlatform(name),...o});
+  const shopee=()=>[{min:0,pct:20,item:4,ship:0},{min:80,pct:14,item:16,ship:0},{min:100,pct:14,item:20,ship:0},{min:200,pct:14,item:26,ship:0},{min:500,pct:14,item:28,ship:0}];
+  const ml=pct=>[{min:0,pct,item:6.5,ship:0},{min:79,pct,item:0,ship:11.97}];
+  const mlNote='Comissão estimada para Casa, Móveis e Decoração; confira a da sua categoria no simulador do Mercado Livre. Abaixo de R$ 79: custo por unidade que varia com peso e medidas desde 02/03/2026 (média de R$ 6 a R$ 7) e frete pago pelo Mercado Livre. A partir de R$ 79: frete grátis obrigatório; R$ 11,97 é o envio até 300 g com reputação verde. Ajuste pelo peso do kit.';
+  return [
+    P('Shopee (CNPJ)',{bands:shopee(),note:'Tabela por faixa vigente desde 01/03/2026. A comissão já inclui frete grátis (obrigatório para todos) e taxa de transação, sem teto. O desconto Pix é bancado pela Shopee. Itens abaixo de R$ 10 têm regra própria.'}),
+    P('Shopee (CPF)',{bands:shopee(),perItem:3,note:'Mesma tabela do CNPJ mais R$ 3 por item. As fontes divergem: algumas aplicam o adicional a todo vendedor CPF, outras só acima de 450 pedidos em 90 dias. Se não se aplica a você, zere o adicional.'}),
+    P('Mercado Livre Clássico',{bands:ml(12),note:'Clássico: 10% a 14% conforme a categoria (Casa, Móveis e Decoração fica perto de 11,5% a 14%). '+mlNote}),
+    P('Mercado Livre Premium',{bands:ml(17),note:'Premium: 15% a 19% conforme a categoria (Casa, Móveis e Decoração fica perto de 16,5% a 19%), com parcelamento sem juros. '+mlNote}),
+    P('TikTok Shop',{bands:[{min:0,pct:10,item:4,ship:0},{min:50,pct:6,item:6,ship:0}],pctPromo:6,promoCap:50,note:'Tabela vigente desde 15/07/2026. O Programa de Frete Grátis (6%, teto de R$ 50 por item) está incluído; zere se não participar. Comissão de afiliados não incluída: use o campo de publicidade.'}),
+    P('Instagram / venda direta',{note:'Sem comissão de plataforma. Se receber no cartão, coloque a taxa da maquininha em Taxa de serviço.'}),
+  ];
+}
+const OLD_DEFAULT_NAMES=['Shopee','Mercado Livre Clássico','Mercado Livre Premium','TikTok Shop','Instagram / venda direta'];
+function migrate(s){
+  s.platforms.forEach(p=>{
+    if(!Array.isArray(p.bands)){
+      const pct=p.mode==='det'?num(p.pctComm):num(p.pctTotal);
+      p.bands=[{min:0,pct,item:0,ship:0}];
+      if(num(p.thrPrice)>0&&num(p.thrFee)>0) p.bands=[{min:0,pct,item:num(p.thrFee),ship:0},{min:num(p.thrPrice),pct,item:0,ship:0}];
+      if(p.mode!=='det'){ p.pctService=0; p.pctPromo=0; }
+      p.promoCap=p.promoCap||0; p.note=p.note||'';
+    }
+  });
+  if(!s.v||s.v<2){
+    const keep=s.platforms.filter(p=>!OLD_DEFAULT_NAMES.includes(p.name));
+    s.platforms=[...researchedPlatforms(),...keep];
+    s.v=2;
+  }
+  const ids=s.platforms.map(p=>p.id);
+  if(!ids.includes(s.ui.platformId)) s.ui.platformId=ids[0];
+  if(!ids.includes(s.ui.editPlat)) s.ui.editPlat=ids[0];
+  return s;
+}
+function defaults(){
+  const p1={id:'p-pano',name:'Pano de prato bordado com renda',material:20,other:0,bordado:100,costura:30,extraMin:0};
+  const plats=researchedPlatforms(), shopee=plats[0];
+  const kit=(id,name,q)=>({id,name,items:[{id:uid(),pid:p1.id,qty:q}],packaging:2,prep:0,otherCost:0,billable:1,discount:q>1?10:0,testPrice:''});
+  return {v:2,products:[p1],kits:[kit('k3','Kit 3 panos de prato',3),kit('k1','Pano de prato avulso',1),kit('k5','Kit 5 panos de prato',5)],platforms:plats,
+    settings:{laborMode:'A',rate:20,margin:20,reserve:0,splitMode:'equal',people:[{id:uid(),name:'Pessoa 1',rate:20,timePct:100,share:50},{id:uid(),name:'Pessoa 2',rate:20,timePct:100,share:50}]},
+    ui:{tab:'kits',kitId:'k3',platformId:shopee.id,productId:p1.id,editPlat:shopee.id,platTest:200,cmpQty:10,cmpPack:2,cmpDisc:10}};
+}
+let state=defaults();
+const S=()=>state.settings;
+const curKit=()=>state.kits.find(k=>k.id===state.ui.kitId)||state.kits[0];
+const curPlat=()=>state.platforms.find(p=>p.id===state.ui.platformId)||state.platforms[0];
+const isBlankPlat=p=>(p.bands||[]).every(b=>!num(b.pct)&&!num(b.item)&&!num(b.ship))&&['pctService','pctPromo','perOrder','perItem','logistics','freightSeller','ads','taxPct','taxFixed','otherFixed'].every(k=>!num(p[k]));
+
+// ---- persistência ----
+// Tudo é guardado como JSON: estado atual (conta + aparelho), histórico de cópias e backup em arquivo .json
+let dbRef=null, bakRef=null, saveT=null, pending=false, backups=[], lastBak=0, downloadsP=Promise.resolve(null);
+const LS='muller-atelier-v1';
+function setSave(t){const e=document.getElementById('saveState'); if(e) e.textContent=t;}
+function persistNow(){
+  clearTimeout(saveT); if(!pending) return; pending=false;
+  const json=JSON.stringify(state);
+  try{localStorage.setItem(LS,json);}catch(e){}
+  maybeBackup(json,false);
+  if(dbRef){ dbRef.set({state:json,updatedAt:Date.now()}).then(()=>setSave('Salvo na sua conta')).catch(()=>setSave('Salvo neste aparelho')); }
+  else setSave('Salvo neste aparelho');
+}
+function save(){ pending=true; setSave('Salvando…'); clearTimeout(saveT); saveT=setTimeout(persistNow,400); }
+function mergeBaks(list){
+  const m=new Map(); [...backups,...(list||[])].forEach(b=>{ if(b&&b.at&&typeof b.state==='string') m.set(b.at,b); });
+  backups=[...m.values()].sort((a,b)=>b.at-a.at).slice(0,15); lastBak=backups[0]?.at||0;
+}
+function maybeBackup(json,force){
+  const now=Date.now(); if(!force && now-lastBak<10*60*1000) return; lastBak=now;
+  backups=[{at:now,state:json},...backups].slice(0,15);
+  while(backups.length>1 && JSON.stringify(backups).length>200000) backups.pop();
+  try{localStorage.setItem(LS+'-bak',JSON.stringify(backups));}catch(e){}
+  if(bakRef) bakRef.set({list:backups}).catch(()=>{});
+  const e=document.getElementById('bakList'); if(e) e.innerHTML=bakList();
+}
+function bakList(){
+  if(!backups.length) return '<p class="note">Nenhuma cópia ainda. A primeira é criada na próxima alteração.</p>';
+  return '<ul class="baks">'+backups.map(b=>{ let info=''; try{ const s=JSON.parse(b.state); info=`${s.products.length} produtos, ${s.kits.length} kits`; }catch(e){}
+    return `<li><span>${new Date(b.at).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}<small>${info}</small></span><button class="link" data-act="restoreBak" data-id="${b.at}">Restaurar</button></li>`; }).join('')+'</ul>';
+}
+function blobDownload(name,text){
+  try{ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type:'application/json'})); a.download=name;
+    document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },1500); return true; }catch(e){ return false; }
+}
+// kind: 'all' = tudo; 'config' = só plataformas, equipe e margem
+async function exportJson(kind){
+  const day=new Date().toISOString().slice(0,10), at=new Date().toISOString();
+  const payload=kind==='config'
+    ? {app:'muller-atelier',type:'config',version:2,exportedAt:at,config:{platforms:state.platforms,settings:state.settings}}
+    : {app:'muller-atelier',type:'full',version:2,exportedAt:at,state};
+  const json=JSON.stringify(payload,null,2);
+  const name=(kind==='config'?'muller-atelier-configuracoes-':'muller-atelier-backup-')+day+'.json';
+  let dl=null; try{ dl=await downloadsP; }catch(e){}
+  if(dl){ try{ await dl.save({filename:name,data:json}); toast('Arquivo exportado'); return; }catch(e){ if(e&&e.code==='declined') return; } }
+  if(!window.claude && blobDownload(name,json)){ toast('Arquivo exportado'); return; }
+  const ok=await copyText(json); toast(ok?'JSON copiado: cole num arquivo .json':'Não foi possível exportar');
+}
+async function importFile(file){
+  let obj; try{ obj=JSON.parse(await file.text()); }catch(e){ toast('Arquivo JSON inválido'); return; }
+  const c=obj&&obj.config;
+  if(c){
+    if(!Array.isArray(c.platforms)||!c.platforms.length||!c.settings||!Array.isArray(c.settings.people)||!c.settings.people.length){ toast('Arquivo de configurações incompleto'); return; }
+    if(!confirm('Substituir plataformas, equipe e margem pelas do arquivo? Seus produtos e kits continuam como estão.')) return;
+    maybeBackup(JSON.stringify(state),true);
+    const s=migrate({...JSON.parse(JSON.stringify(state)),platforms:c.platforms,settings:c.settings,v:2});
+    state=s; save(); render(); toast('Configurações importadas'); return;
+  }
+  const s=load(JSON.stringify(obj&&obj.state?obj.state:obj));
+  if(!s){ toast('Esse arquivo não é um backup do simulador'); return; }
+  if(!confirm('Substituir todos os dados atuais pelo arquivo? Os dados atuais ficam guardados no histórico de cópias.')) return;
+  maybeBackup(JSON.stringify(state),true); state=s; save(); render(); toast('Backup importado');
+}
+function load(json){ try{ const s=JSON.parse(json); if(s&&s.products&&s.kits&&s.platforms&&s.settings){ const d=defaults(); s.ui={...d.ui,...(s.ui||{})}; return migrate(s); } }catch(e){} return null; }
+async function initDb(){
+  try{
+    if(!window.claude||!window.claude.use) return;
+    downloadsP=claude.use('downloads').catch(()=>null);
+    const [db,user]=await Promise.all([claude.use('db'),claude.use('user')]);
+    if(!db||!user) return;
+    const id=await user.id(); if(!id) return;
+    dbRef=db.doc('data/users/'+id+'/app');
+    bakRef=db.doc('data/users/'+id+'/backup');
+    try{ const bs=await bakRef.get(); if(bs.exists) mergeBaks(bs.data().list); }catch(e){}
+    const snap=await dbRef.get();
+    const s=snap.exists?load(snap.data().state):null;
+    if(s){ state=s; render(); setSave('Salvo na sua conta'); } else save();
+    if(backups.length) bakRef.set({list:backups}).catch(()=>{});
+  }catch(e){ dbRef=null; }
+}
+
+// ---- helpers de formulário ----
+function inp(col,id,f,val,o={}){
+  const t=o.text?'text':'text', im=o.text?'':' inputmode="decimal"';
+  return `<label class="fld${o.wide?' wide':''}"><span>${o.label}</span><div class="inwrap">${o.pre?`<i>${o.pre}</i>`:''}<input type="${t}"${im} data-col="${col}" data-id="${id||''}" data-f="${f}" value="${esc(val)}" ${o.ph?`placeholder="${esc(o.ph)}"`:''}>${o.suf?`<i>${o.suf}</i>`:''}</div>${o.hint?`<small>${o.hint}</small>`:''}</label>`;
+}
+const money=(col,id,f,v,label,hint)=>inp(col,id,f,v,{label,pre:'R$',hint});
+const perc=(col,id,f,v,label,hint)=>inp(col,id,f,v,{label,suf:'%',hint});
+const mins=(col,id,f,v,label,hint)=>inp(col,id,f,v,{label,suf:'min',hint});
+const statusTxt={ok:'Margem atingida',below:'Abaixo da meta',loss:'Prejuízo',even:'Ponto de equilíbrio'};
+const badge=st=>`<span class="badge ${st}">${statusTxt[st]}</span>`;
+
+function setVal(col,id,f,v){
+  let o;
+  if(col==='settings') o=S(); else if(col==='ui') o=state.ui;
+  else if(col==='items') o=curKit().items.find(i=>i.id===id);
+  else if(col==='people') o=S().people.find(p=>p.id===id);
+  else o=state[col].find(x=>x.id===id);
+  if(o) o[f]=v;
+}
+
+// ---- render ----
+function render(){
+  document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-current',b.dataset.tab===state.ui.tab?'page':'false'));
+  const v=document.getElementById('view');
+  v.innerHTML={kits:viewKits,products:viewProducts,platforms:viewPlatforms,team:viewTeam}[state.ui.tab]();
+  renderResults();
+}
+function renderResults(){
+  const t=state.ui.tab;
+  if(t==='kits'){ const e=document.getElementById('res'); if(e) e.innerHTML=kitResults(); }
+  if(t==='products'){ state.products.forEach(p=>{const e=document.getElementById('ps-'+p.id); if(e) e.innerHTML=prodSummary(p);}); const c=document.getElementById('cmp'); if(c) c.innerHTML=compareTable(); }
+  if(t==='platforms'){ const e=document.getElementById('platPrev'); if(e) e.innerHTML=platPreview(); }
+  if(t==='team'){ const e=document.getElementById('teamChk'); if(e) e.innerHTML=teamCheck(); const b=document.getElementById('bakList'); if(b) b.innerHTML=bakList(); }
+}
+
+// ===== Kits =====
+function viewKits(){
+  const k=curKit();
+  const chips=state.kits.map(x=>`<button class="chip${x.id===k?.id?' on':''}" data-act="selKit" data-id="${x.id}">${esc(x.name||'Sem nome')}</button>`).join('');
+  if(!k) return `<section class="empty"><p>Nenhum kit ainda. Cadastre seus produtos e monte o primeiro kit.</p><button class="btn" data-act="addKit">Novo kit</button></section>`;
+  const opts=pid=>state.products.map(p=>`<option value="${p.id}"${p.id===pid?' selected':''}>${esc(p.name)}</option>`).join('');
+  const items=k.items.map(it=>`<div class="itemrow"><select data-col="items" data-id="${it.id}" data-f="pid" aria-label="Produto">${opts(it.pid)}</select><input inputmode="decimal" aria-label="Quantidade" data-col="items" data-id="${it.id}" data-f="qty" value="${esc(it.qty)}"><span class="x">un.</span><button class="icon" data-act="delItem" data-id="${it.id}" aria-label="Remover produto">✕</button></div>`).join('');
+  return `<div class="chips">${chips}<button class="chip add" data-act="addKit">+ Novo kit</button></div>
+  <div class="split">
+   <section class="panel form">
+    <div class="phead"><h2>Montar o kit</h2><div class="acts"><button class="link" data-act="dupKit">Duplicar</button><button class="link danger" data-act="delKit">Excluir</button></div></div>
+    ${inp('kits',k.id,'name',k.name,{label:'Nome do kit',text:true,wide:true})}
+    <h3>Produtos no kit</h3>
+    ${state.products.length?items+`<button class="btn ghost sm" data-act="addItem">+ Adicionar produto</button>`:`<p class="note">Cadastre produtos na aba Produtos primeiro.</p>`}
+    <h3>Custos do pedido</h3>
+    <div class="grid">
+     ${money('kits',k.id,'packaging',k.packaging,'Embalagem por kit')}
+     ${mins('kits',k.id,'prep',k.prep,'Preparação adicional')}
+     ${money('kits',k.id,'otherCost',k.otherCost,'Outros custos do pedido','Brinde, cartão, etiqueta…')}
+     ${inp('kits',k.id,'billable',k.billable,{label:'Itens cobrados pela plataforma',hint:'1 se o kit é anunciado como um único item'})}
+    </div>
+    <h3>Vender com desconto ou testar um preço</h3>
+    <div class="grid">
+     ${perc('kits',k.id,'discount',k.discount,'Desconto sobre o recomendado')}
+     ${money('kits',k.id,'testPrice',k.testPrice,'Testar preço de venda','Opcional')}
+    </div>
+   </section>
+   <section id="res" class="results"></section>
+  </div>`;
+}
+function kitResults(){
+  const k=curKit(); if(!k) return '';
+  const st=S(), pf=curPlat();
+  const all=state.platforms.map(p=>({p,r:priceKit(k,state.products,p,st)}));
+  const sel=all.find(a=>a.p.id===pf.id)||all[0]; const r=sel.r, kc=r.kc;
+  if(!kc.qty) return `<div class="panel"><p class="note">${esc(r.err)}</p></div>`;
+  const rows=all.map(({p,r})=>`<button class="prow${p.id===pf.id?' on':''}" data-act="selPlatform" data-id="${p.id}">
+     <span class="pn">${esc(p.name)}${isBlankPlat(p)&&!/instagram|direta/i.test(p.name)?'<em>sem taxas informadas</em>':''}</span>
+     <span class="pv">${r.recP!==null?brl(r.recP):'—'}<small>mín. ${r.minP!==null?brl(r.minP):'—'}</small></span></button>`).join('');
+  let h=`<div class="panel comp"><h2>Composição</h2>
+   <dl class="kv"><dt>Unidades</dt><dd>${kc.qty}</dd><dt>Tempo de produção</dt><dd>${hm(kc.minutes)}</dd>
+   <dt>Materiais</dt><dd>${brl(kc.mat)}</dd><dt>Embalagem</dt><dd>${brl(kc.pack)}</dd>${kc.other?`<dt>Outros custos</dt><dd>${brl(kc.other)}</dd>`:''}
+   <dt>Mão de obra</dt><dd>${brl(kc.labor)}</dd><dt class="b">Custo base</dt><dd class="b">${brl(kc.base)}</dd></dl></div>
+   <div class="panel"><h2>Preço recomendado por plataforma</h2><div class="plist">${rows}</div></div>`;
+  h+=`<div class="panel summary" id="printArea"><h2 class="sumtitle">Müller Atelier — resumo da precificação</h2>
+   <p class="sub">${esc(k.name)} · ${kc.qty} un. · ${esc(pf.name)}</p>`;
+  if(r.recP===null){ h+=`<div class="alert loss">${esc(r.err)}</div>${r.min?`<p>Preço mínimo sem prejuízo: <b>${brl(r.minP)}</b></p>`:''}</div>`; return h; }
+  const e=r.rec;
+  h+=`<div class="hero"><span>Preço recomendado</span><strong>${brl(r.recP)}</strong><span class="hsub">${brl(e.perUnit)} por unidade · margem de ${pct(e.margin)}</span></div>
+   <dl class="kv"><dt>Preço mínimo sem prejuízo</dt><dd>${brl(r.minP)}</dd>
+   <dt>Materiais</dt><dd>${brl(kc.mat)}</dd><dt>Embalagem</dt><dd>${brl(kc.pack)}</dd>${kc.other?`<dt>Outros custos</dt><dd>${brl(kc.other)}</dd>`:''}
+   <dt>Mão de obra</dt><dd>${brl(kc.labor)}</dd>
+   <dt>Taxas da plataforma</dt><dd>${brl(e.f.platform)}</dd>${e.f.ads?`<dt>Publicidade</dt><dd>${brl(e.f.ads)}</dd>`:''}${e.f.tax?`<dt>Impostos</dt><dd>${brl(e.f.tax)}</dd>`:''}
+   ${e.f.freight?`<dt>Frete líquido do vendedor</dt><dd>${brl(e.f.freight)}</dd>`:''}${e.f.other?`<dt>Outros encargos</dt><dd>${brl(e.f.other)}</dd>`:''}
+   <dt class="b">Custo total da operação</dt><dd class="b">${brl(e.total)}</dd>
+   <dt class="b">Lucro adicional</dt><dd class="b pos">${brl(e.profit)}</dd></dl>
+   ${people(e)}`;
+  if(r.disc) h+=scenario(`Com ${num(k.discount).toLocaleString('pt-BR')}% de desconto`,r.disc,r.minP);
+  if(r.test) h+=scenario('Preço testado',r.test,r.minP);
+  h+=`<div class="btns noprint"><button class="btn" data-act="copy">Copiar resumo</button><button class="btn ghost" data-act="print">Imprimir / PDF</button></div></div>`;
+  return h;
+}
+function people(e){
+  const st=S();
+  return `<h3>Ganhos por pessoa</h3><div class="ppl">${e.persons.map(p=>`<div class="pcard"><b>${esc(p.name)}</b>
+   <dl class="kv sm"><dt>Pelo trabalho</dt><dd>${brl(p.labor)}</dd><dt>Parte do lucro</dt><dd class="${p.share<0?'neg':''}">${brl(p.share)}</dd></dl>
+   <div class="ptot">${brl(p.total)}</div></div>`).join('')}</div>
+   ${e.reserve>0?`<p class="note">Reserva do ateliê (${num(st.reserve).toLocaleString('pt-BR')}% do lucro): <b>${brl(e.reserve)}</b>. Distribuído: ${brl(e.dist)}.</p>`:''}`;
+}
+function scenario(title,e,minP){
+  const warn=e.status==='loss'?`<div class="alert loss">Abaixo do preço mínimo (${brl(minP)}). Essa venda dá prejuízo.</div>`:e.status==='below'?`<div class="alert below">Cobre os custos, mas fica abaixo da margem desejada de ${num(S().margin)}%.</div>`:e.status==='even'?`<div class="alert below">Ponto de equilíbrio: paga os custos e não sobra lucro.</div>`:'';
+  return `<div class="scen"><div class="shead"><h3>${title}</h3>${badge(e.status)}</div>${warn}
+   <dl class="kv"><dt>Preço de venda</dt><dd class="b">${brl(e.P)}</dd><dt>Taxas, impostos e frete</dt><dd>${brl(e.f.total)}</dd>
+   <dt>Custo total</dt><dd>${brl(e.total)}</dd><dt>Lucro adicional</dt><dd class="${e.profit<0?'neg':'pos'}">${brl(e.profit)}</dd><dt>Margem efetiva</dt><dd>${pct(e.margin)}</dd></dl>
+   <p class="note">${e.persons.map(p=>`${esc(p.name)}: <b>${brl(p.total)}</b>`).join(' · ')}</p></div>`;
+}
+function summaryText(){
+  const k=curKit(), pf=curPlat(), r=priceKit(k,state.products,pf,S()), kc=r.kc;
+  const L=[`MÜLLER ATELIER — RESUMO DA PRECIFICAÇÃO`,``,`Produto: ${k.name}`,`Quantidade: ${kc.qty} un.`,`Plataforma: ${pf.name}`,``];
+  if(r.recP===null){ L.push(r.err||'Sem preço recomendado.'); return L.join('\n'); }
+  const e=r.rec;
+  L.push(`Preço recomendado: ${brl(r.recP)}`,`Preço mínimo sem prejuízo: ${brl(r.minP)}`,`Preço por unidade: ${brl(e.perUnit)}`,``,
+   `Materiais: ${brl(kc.mat)}`,`Embalagem: ${brl(kc.pack)}`,`Outros custos: ${brl(kc.other)}`,`Mão de obra (${hm(kc.minutes)}): ${brl(kc.labor)}`,
+   `Taxas da plataforma: ${brl(e.f.platform)}`,`Impostos: ${brl(e.f.tax)}`,`Publicidade: ${brl(e.f.ads)}`,`Frete líquido: ${brl(e.f.freight)}`,`Outros encargos: ${brl(e.f.other)}`,
+   `Custo total da operação: ${brl(e.total)}`,`Lucro adicional: ${brl(e.profit)}`,`Margem efetiva: ${pct(e.margin)}`,``);
+  e.persons.forEach(p=>L.push(`${p.name}: trabalho ${brl(p.labor)} + lucro ${brl(p.share)} = ${brl(p.total)}`));
+  if(e.reserve>0) L.push(`Reserva do ateliê: ${brl(e.reserve)}`);
+  if(r.disc) L.push(``,`Com ${num(k.discount)}% de desconto: ${brl(r.discP)} — lucro ${brl(r.disc.profit)} (${pct(r.disc.margin)}) — ${statusTxt[r.disc.status]}`);
+  if(r.test) L.push(``,`Preço testado ${brl(r.test.P)}: lucro ${brl(r.test.profit)} (${pct(r.test.margin)}) — ${statusTxt[r.test.status]}`);
+  return L.join('\n');
+}
+
+// ===== Produtos =====
+function viewProducts(){
+  const cards=state.products.map(p=>`<section class="panel form prod">
+   <div class="phead">${inp('products',p.id,'name',p.name,{label:'Nome do produto',text:true,wide:true})}<button class="link danger" data-act="delProduct" data-id="${p.id}">Excluir</button></div>
+   <div class="grid g4">
+    ${money('products',p.id,'material',p.material,'Materiais por unidade')}
+    ${money('products',p.id,'other',p.other,'Outros custos por unidade')}
+    ${mins('products',p.id,'bordado',p.bordado,'Bordado por unidade')}
+    ${mins('products',p.id,'costura',p.costura,'Costura por unidade')}
+    ${mins('products',p.id,'extraMin',p.extraMin,'Acabamento / outro tempo')}
+   </div><p class="psum" id="ps-${p.id}"></p></section>`).join('');
+  const u=state.ui;
+  const popt=state.products.map(p=>`<option value="${p.id}"${p.id===u.productId?' selected':''}>${esc(p.name)}</option>`).join('');
+  const fopt=state.platforms.map(p=>`<option value="${p.id}"${p.id===u.platformId?' selected':''}>${esc(p.name)}</option>`).join('');
+  return `<div class="phead top"><p class="lead">Cadastre cada produto uma vez, com custo e tempo por unidade. Depois é só montar os kits.</p><button class="btn" data-act="addProduct">+ Novo produto</button></div>
+   ${cards||'<section class="empty"><p>Nenhum produto cadastrado.</p></section>'}
+   ${state.products.length?`<section class="panel"><h2>Comparar quantidades</h2>
+    <div class="grid g4"><label class="fld"><span>Produto</span><select data-col="ui" data-f="productId">${popt}</select></label>
+    <label class="fld"><span>Plataforma</span><select data-col="ui" data-f="platformId">${fopt}</select></label>
+    ${inp('ui','','cmpQty',u.cmpQty,{label:'Quantidade personalizada',suf:'un.'})}
+    ${money('ui','','cmpPack',u.cmpPack,'Embalagem por kit')}
+    ${perc('ui','','cmpDisc',u.cmpDisc,'Desconto nos kits')}</div>
+    <div id="cmp" class="tablewrap"></div></section>`:''}`;
+}
+function prodSummary(p){
+  const k={items:[{pid:p.id,qty:1}],packaging:0,prep:0,otherCost:0,billable:1};
+  const kc=kitCosts(k,state.products,S());
+  return `Por unidade: ${brl(kc.mat+kc.varOther)} de materiais, ${hm(kc.minutes)} de trabalho = ${brl(kc.labor)} de mão de obra. <b>Custo base ${brl(kc.base)}</b>`;
+}
+function compareTable(){
+  const u=state.ui, p=state.products.find(x=>x.id===u.productId)||state.products[0]; if(!p) return '';
+  const pf=curPlat(), st=S(), cq=Math.max(1,Math.round(num(u.cmpQty))||1);
+  const cols=[1,3,5,cq].map((q,i)=>{const k={items:[{pid:p.id,qty:q}],packaging:u.cmpPack,prep:0,otherCost:0,billable:1,discount:q>1?u.cmpDisc:0};
+    return {label:i===3?`${q} un. (pers.)`:q===1?'Avulso':`Kit ${q}`,r:priceKit(k,state.products,pf,st)};});
+  const row=(lbl,fn)=>`<tr><th>${lbl}</th>${cols.map(c=>`<td>${fn(c.r)}</td>`).join('')}</tr>`;
+  const ev=r=>r.disc||r.rec;
+  const ok=r=>r.recP!==null;
+  return `<table class="cmp"><thead><tr><th></th>${cols.map(c=>`<th>${c.label}</th>`).join('')}</tr></thead><tbody>
+   ${row('Quantidade',r=>r.kc.qty)}${row('Materiais',r=>brl(r.kc.mat))}${row('Mão de obra',r=>brl(r.kc.labor))}${row('Custo base',r=>brl(r.kc.base))}
+   ${row('Preço mínimo',r=>r.minP!==null?brl(r.minP):'—')}${row('Preço recomendado',r=>ok(r)?`<b>${brl(r.recP)}</b>`:'—')}
+   ${row('Com desconto',r=>r.disc?brl(r.discP):'sem desconto')}${row('Taxas da plataforma',r=>ok(r)?brl(ev(r).f.platform):'—')}
+   ${row('Lucro adicional',r=>ok(r)?brl(ev(r).profit):'—')}${row('Margem efetiva',r=>ok(r)?pct(ev(r).margin):'—')}
+   ${row('Ganho por pessoa',r=>ok(r)?ev(r).persons.map(x=>brl(x.total)).join('<br>'):'—')}
+   ${row('Situação',r=>ok(r)?badge(ev(r).status):'—')}</tbody></table>
+   <p class="note">Lucro, margem e ganhos consideram o preço com desconto quando houver. Embalagem contada uma vez por kit.</p>`;
+}
+
+// ===== Plataformas =====
+function viewPlatforms(){
+  const p=state.platforms.find(x=>x.id===state.ui.editPlat)||state.platforms[0];
+  const chips=state.platforms.map(x=>`<button class="chip${x.id===p?.id?' on':''}" data-act="editPlat" data-id="${x.id}">${esc(x.name)}</button>`).join('');
+  if(!p) return `<div class="chips"><button class="chip add" data-act="addPlatform">+ Nova plataforma</button></div>`;
+  const id=p.id, M=(f,l,h)=>money('platforms',id,f,p[f],l,h), Pc=(f,l,h)=>perc('platforms',id,f,p[f],l,h);
+  return `<div class="chips">${chips}<button class="chip add" data-act="addPlatform">+ Nova plataforma</button></div>
+  <p class="note warn">Taxas pesquisadas em outubro de 2026 em fontes públicas. Confira na sua conta de vendedor: elas mudam por categoria, preço, campanha e tipo de anúncio.</p>
+  <div class="split"><section class="panel form">
+   <div class="phead">${inp('platforms',id,'name',p.name,{label:'Nome',text:true,wide:true})}<div class="acts"><button class="link" data-act="dupPlatform">Duplicar</button><button class="link danger" data-act="delPlatform">Excluir</button></div></div>
+   <label class="fld"><span>Observações e fonte</span><textarea rows="3" data-col="platforms" data-id="${id}" data-f="note">${esc(p.note||'')}</textarea></label>
+   <h3>Comissão e tarifa por faixa de preço</h3>
+   <p class="note">A faixa é escolhida pelo preço de cada item cobrado. Com uma faixa só, as taxas valem para qualquer preço.</p>
+   <div class="tablewrap"><table class="bands"><thead><tr><th>A partir de</th><th>Comissão</th><th>Tarifa por item</th><th>Frete pago por você</th><th></th></tr></thead><tbody>
+   ${(p.bands||[]).map((b,i)=>`<tr>
+     <td><div class="inwrap"><i>R$</i><input inputmode="decimal" aria-label="Preço inicial da faixa" data-col="bands" data-pid="${id}" data-id="${i}" data-f="min" value="${i===0?'0':esc(b.min)}"${i===0?' disabled':''}></div></td>
+     <td><div class="inwrap"><input inputmode="decimal" aria-label="Comissão" data-col="bands" data-pid="${id}" data-id="${i}" data-f="pct" value="${esc(b.pct)}"><i>%</i></div></td>
+     <td><div class="inwrap"><i>R$</i><input inputmode="decimal" aria-label="Tarifa por item" data-col="bands" data-pid="${id}" data-id="${i}" data-f="item" value="${esc(b.item)}"></div></td>
+     <td><div class="inwrap"><i>R$</i><input inputmode="decimal" aria-label="Frete pago por você" data-col="bands" data-pid="${id}" data-id="${i}" data-f="ship" value="${esc(b.ship)}"></div></td>
+     <td>${i>0?`<button class="icon" data-act="delBand" data-id="${i}" aria-label="Remover faixa">✕</button>`:''}</td></tr>`).join('')}
+   </tbody></table></div>
+   <button class="btn ghost sm" data-act="addBand">+ Adicionar faixa</button>
+   <h3>Taxas adicionais</h3>
+   <div class="grid">${Pc('pctService','Taxa de serviço ou transação','Só se não estiver na comissão')}${M('cap','Teto da comissão por item','0 = sem teto')}
+    ${Pc('pctPromo','Programa promocional','Ex.: frete grátis opcional')}${M('promoCap','Teto do programa por item','0 = sem teto')}
+    ${M('perOrder','Tarifa por pedido','Cobrada uma vez por venda')}${M('perItem','Adicional por item','Somado em qualquer faixa')}</div>
+   <h3>Frete</h3>
+   <div class="grid">${M('freightSeller','Frete extra pago por você','Além do frete da faixa')}${M('subsidy','Subsídio de frete recebido')}${M('logistics','Tarifa logística da plataforma')}${M('freightBuyer','Frete pago pelo comprador','Não conta como receita')}</div>
+   <label class="chk"><input type="checkbox" data-col="platforms" data-id="${id}" data-f="freightInBase"${p.freightInBase?' checked':''}> A comissão também incide sobre o frete do comprador</label>
+   <h3>Publicidade e impostos</h3>
+   <div class="seg" role="radiogroup"><label><input type="radio" name="am" data-col="platforms" data-id="${id}" data-f="adsMode" value="pct"${p.adsMode!=='fix'?' checked':''}> Publicidade em %</label><label><input type="radio" name="am" data-col="platforms" data-id="${id}" data-f="adsMode" value="fix"${p.adsMode==='fix'?' checked':''}> Valor por venda</label></div>
+   <div class="grid">${p.adsMode==='fix'?M('ads','Publicidade por venda'):Pc('ads','Publicidade sobre o preço','Não é a comissão da plataforma')}
+    ${Pc('taxPct','Impostos sobre o faturamento','Deixe 0 se já estiver na taxa total')}${M('taxFixed','Impostos fixos por pedido')}${M('otherFixed','Outros encargos por pedido')}</div>
+  </section>
+  <section class="panel"><h2>Quanto essa plataforma leva</h2>${money('ui','','platTest',state.ui.platTest,'Num preço de venda de')}<div id="platPrev"></div></section></div>`;
+}
+function platPreview(){
+  const p=state.platforms.find(x=>x.id===state.ui.editPlat)||state.platforms[0]; if(!p) return '';
+  const P=num(state.ui.platTest), f=fees(P,p,1);
+  const B=bandsOf(p);
+  return `<p class="note" style="margin:0 0 10px">Faixa aplicada: a partir de ${brl(f.bandMin)} (${B[f.band].pct.toLocaleString('pt-BR')}% + ${brl(B[f.band].item)} por item)</p>
+   <dl class="kv"><dt>Comissão e tarifas</dt><dd>${brl(f.platform)}</dd><dt>Publicidade</dt><dd>${brl(f.ads)}</dd><dt>Impostos</dt><dd>${brl(f.tax)}</dd>
+   <dt>Frete líquido</dt><dd>${brl(f.freight)}</dd><dt>Outros encargos</dt><dd>${brl(f.other)}</dd><dt class="b">Total descontado</dt><dd class="b">${brl(f.total)}</dd>
+   <dt class="b">Sobra para você</dt><dd class="b pos">${brl(P-f.total)}</dd></dl>
+   ${f.capped?'<p class="note">O teto da comissão está sendo aplicado.</p>':''}
+   <p class="note">Simulação com 1 item cobrado.</p>`;
+}
+
+// ===== Equipe e margem =====
+function viewTeam(){
+  const st=S();
+  const ppl=st.people.map(p=>`<div class="person"><div class="grid g4">${inp('people',p.id,'name',p.name,{label:'Nome',text:true})}
+   ${st.laborMode==='B'?money('people',p.id,'rate',p.rate,'Valor da hora')+perc('people',p.id,'timePct',p.timePct,'Do tempo de produção','100% = trabalhou o tempo todo'):''}
+   ${st.splitMode==='custom'?perc('people',p.id,'share',p.share,'Parte do lucro'):''}</div>
+   ${st.people.length>1?`<button class="link danger" data-act="delPerson" data-id="${p.id}">Remover</button>`:''}</div>`).join('');
+  return `<div class="split"><section class="panel form">
+   <h2>Mão de obra</h2>
+   <div class="seg col" role="radiogroup">
+    <label><input type="radio" name="lm" data-col="settings" data-f="laborMode" value="A"${st.laborMode!=='B'?' checked':''}> <b>Hora total de produção</b><small>O valor da hora paga o tempo do trabalho, dividido entre as pessoas. 6,5 h × R$ 20 = R$ 130, R$ 65 para cada uma.</small></label>
+    <label><input type="radio" name="lm" data-col="settings" data-f="laborMode" value="B"${st.laborMode==='B'?' checked':''}> <b>Hora individual</b><small>Cada pessoa recebe pelo próprio tempo. Duas pessoas com 6,5 h × R$ 20 = R$ 260.</small></label></div>
+   ${st.laborMode!=='B'?`<div class="grid">${money('settings','','rate',st.rate,'Valor da hora')}</div>`:''}
+   <h2>Lucro</h2>
+   <div class="grid">${perc('settings','','margin',st.margin,'Margem de lucro desejada','Lucro adicional ÷ preço de venda')}${perc('settings','','reserve',st.reserve,'Reserva para o ateliê','Separada antes de dividir o lucro')}</div>
+   <div class="seg" role="radiogroup"><label><input type="radio" name="sm" data-col="settings" data-f="splitMode" value="equal"${st.splitMode!=='custom'?' checked':''}> Dividir lucro igualmente</label><label><input type="radio" name="sm" data-col="settings" data-f="splitMode" value="custom"${st.splitMode==='custom'?' checked':''}> Percentuais por pessoa</label></div>
+   <h2>Pessoas</h2>${ppl}<button class="btn ghost sm" data-act="addPerson">+ Adicionar pessoa</button><div id="teamChk"></div>
+  </section>
+  <section class="panel"><h2>Dados do simulador</h2><p class="note">Tudo é salvo automaticamente: produtos, kits, plataformas e equipe.</p>
+   <div class="btns"><button class="btn ghost" data-act="restore">Restaurar padrão</button><button class="btn ghost danger" data-act="clear">Começar do zero</button></div>
+   <p class="note">“Começar do zero” apaga produtos e kits, mantendo plataformas e equipe.</p>
+   <h3>Importar e exportar</h3>
+   <p class="note"><b>Tudo</b> leva produtos, kits, plataformas, equipe e margem. <b>Configurações</b> leva só plataformas, equipe e margem; ao importar, seus produtos e kits continuam como estão. O arquivo importado é reconhecido sozinho.</p>
+   <div class="btns"><button class="btn" data-act="exportJson" data-id="all">Exportar tudo</button><button class="btn ghost" data-act="exportJson" data-id="config">Exportar configurações</button><label class="btn ghost" tabindex="0" id="importLabel">Importar arquivo .json<input type="file" id="importFile" accept=".json,application/json" hidden></label></div>
+   <h3>Histórico de cópias</h3>
+   <p class="note">Uma cópia automática a cada 10 minutos de uso, e antes de restaurar, importar ou apagar. Ficam as 15 mais recentes.</p>
+   <div id="bakList"></div></section></div>`;
+}
+function teamCheck(){
+  const st=S(); let h='';
+  if(st.splitMode==='custom'){ const t=st.people.reduce((a,p)=>a+num(p.share),0);
+    h+=Math.abs(t-100)<0.001?`<p class="alert ok">Parte do lucro soma 100%.</p>`:`<p class="alert loss">A parte do lucro soma ${t.toLocaleString('pt-BR')}%. Ajuste para 100%.</p>`; }
+  if(num(st.margin)>=100) h+=`<p class="alert loss">A margem precisa ser menor que 100%.</p>`;
+  return h;
+}
+
+// ===== eventos =====
+function onInput(e){
+  const t=e.target; if(!t.dataset||!t.dataset.col) return;
+  if(t.type==='radio'||t.type==='checkbox'||t.tagName==='SELECT') return;
+  if(t.dataset.col==='bands'){ const p=state.platforms.find(x=>x.id===t.dataset.pid); const b=p&&p.bands[+t.dataset.id]; if(b) b[t.dataset.f]=t.value; save(); renderResults(); return; }
+  setVal(t.dataset.col,t.dataset.id,t.dataset.f,t.value); save(); renderResults();
+}
+function onChange(e){
+  const t=e.target;
+  if(t.id==='importFile'){ const f=t.files&&t.files[0]; t.value=''; if(f) importFile(f); return; }
+  if(!t.dataset||!t.dataset.col) return;
+  if(!(t.type==='radio'||t.type==='checkbox'||t.tagName==='SELECT')) return;
+  setVal(t.dataset.col,t.dataset.id,t.dataset.f,t.type==='checkbox'?t.checked:t.value); save(); render();
+}
+async function copyText(txt){
+  try{ await navigator.clipboard.writeText(txt); return true; }catch(e){
+    const ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta); ta.select(); let ok=false; try{ok=document.execCommand('copy');}catch(_){} ta.remove(); return ok; }
+}
+function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('on'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('on'),2200); }
+function onClick(e){
+  const b=e.target.closest('[data-act],[data-tab]'); if(!b) return;
+  if(b.dataset.tab){ state.ui.tab=b.dataset.tab; save(); render(); window.scrollTo(0,0); return; }
+  const a=b.dataset.act, id=b.dataset.id, k=curKit(), u=state.ui;
+  switch(a){
+    case 'selKit': u.kitId=id; break;
+    case 'addKit': { const nk={id:uid(),name:'Novo kit',items:state.products[0]?[{id:uid(),pid:state.products[0].id,qty:1}]:[],packaging:2,prep:0,otherCost:0,billable:1,discount:0,testPrice:''}; state.kits.push(nk); u.kitId=nk.id; u.tab='kits'; break; }
+    case 'dupKit': { const c=JSON.parse(JSON.stringify(k)); c.id=uid(); c.name=k.name+' (cópia)'; c.items.forEach(i=>i.id=uid()); state.kits.push(c); u.kitId=c.id; toast('Kit duplicado'); break; }
+    case 'delKit': if(!confirm(`Excluir “${k.name}”?`)) return; state.kits=state.kits.filter(x=>x!==k); u.kitId=state.kits[0]?.id; break;
+    case 'addItem': k.items.push({id:uid(),pid:state.products[0].id,qty:1}); break;
+    case 'delItem': k.items=k.items.filter(i=>i.id!==id); break;
+    case 'selPlatform': u.platformId=id; break;
+    case 'addProduct': { const p={id:uid(),name:'Novo produto',material:0,other:0,bordado:0,costura:0,extraMin:0}; state.products.unshift(p); u.productId=p.id; break; }
+    case 'delProduct': { const p=state.products.find(x=>x.id===id); const used=state.kits.filter(kk=>kk.items.some(i=>i.pid===id)).length;
+      if(!confirm(`Excluir “${p.name}”?${used?` Ele será removido de ${used} kit(s).`:''}`)) return;
+      state.products=state.products.filter(x=>x.id!==id); state.kits.forEach(kk=>kk.items=kk.items.filter(i=>i.pid!==id)); break; }
+    case 'editPlat': u.editPlat=id; break;
+    case 'addPlatform': { const p=blankPlatform('Nova plataforma'); state.platforms.push(p); u.editPlat=p.id; break; }
+    case 'addBand': { const p=state.platforms.find(x=>x.id===u.editPlat); const l=p.bands[p.bands.length-1]; p.bands.push({min:round2(num(l.min)+50),pct:l.pct,item:l.item,ship:l.ship}); break; }
+    case 'delBand': { const p=state.platforms.find(x=>x.id===u.editPlat); p.bands.splice(+id,1); break; }
+    case 'dupPlatform': { const s=state.platforms.find(x=>x.id===u.editPlat); const c={...JSON.parse(JSON.stringify(s)),id:uid(),name:s.name+' (cópia)'}; state.platforms.push(c); u.editPlat=c.id; break; }
+    case 'delPlatform': { if(state.platforms.length<2){ toast('Mantenha pelo menos uma plataforma'); return; } const s=state.platforms.find(x=>x.id===u.editPlat); if(!confirm(`Excluir “${s.name}”?`)) return;
+      state.platforms=state.platforms.filter(x=>x!==s); u.editPlat=state.platforms[0].id; if(u.platformId===s.id) u.platformId=state.platforms[0].id; break; }
+    case 'addPerson': { const n=S().people.length+1; S().people.push({id:uid(),name:'Pessoa '+n,rate:S().rate,timePct:100,share:0}); break; }
+    case 'delPerson': S().people=S().people.filter(p=>p.id!==id); break;
+    case 'copy': copyText(summaryText()).then(ok=>toast(ok?'Resumo copiado':'Não foi possível copiar')); return;
+    case 'print': window.print(); return;
+    case 'restore': if(!confirm('Restaurar todos os valores iniciais do Müller Atelier? Os dados atuais ficam guardados no histórico de cópias.')) return; maybeBackup(JSON.stringify(state),true); state=defaults(); toast('Valores iniciais restaurados'); break;
+    case 'clear': if(!confirm('Apagar todos os produtos e kits? Uma cópia fica guardada no histórico.')) return; maybeBackup(JSON.stringify(state),true); state.products=[]; state.kits=[]; u.kitId=null; u.tab='products'; break;
+    case 'exportJson': exportJson(id); return;
+    case 'restoreBak': { const b=backups.find(x=>String(x.at)===id); const s=b&&load(b.state); if(!s){ toast('Cópia inválida'); return; }
+      if(!confirm('Voltar para a cópia de '+new Date(b.at).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})+'? Os dados atuais também ficam guardados no histórico.')) return;
+      maybeBackup(JSON.stringify(state),true); state=s; state.ui.tab='team'; toast('Cópia restaurada'); break; }
+    default: return;
+  }
+  save(); render();
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  try{ const s=load(localStorage.getItem(LS)); if(s) state=s; }catch(e){}
+  try{ mergeBaks(JSON.parse(localStorage.getItem(LS+'-bak')||'[]')); }catch(e){}
+  document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden') persistNow(); });
+  window.addEventListener('pagehide',persistNow);
+  const v=document.getElementById('view');
+  v.addEventListener('input',onInput); v.addEventListener('change',onChange);
+  document.addEventListener('click',onClick);
+  document.addEventListener('keydown',e=>{ if(e.target.id==='importLabel'&&(e.key==='Enter'||e.key===' ')){ e.preventDefault(); document.getElementById('importFile').click(); } });
+  render(); initDb();
+});
+</script></body></html>
