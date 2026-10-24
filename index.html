@@ -110,10 +110,18 @@ label.btn{display:inline-block}
 .erow{padding:8px 0;border-top:1px solid var(--line)}
 .erow>input,.frow>input{font:16px var(--sans);color:var(--cocoa);padding:9px;border:1px solid var(--beige);border-radius:9px;background:var(--bg);width:100%;min-width:0}
 .erow.in .v i{color:var(--ok)}
-.erow .esplit{grid-column:1/-1;font-size:.8rem;color:var(--muted);margin-top:-2px}
+
 @media (max-width:760px){.ehead{display:none}.erow{grid-template-columns:1fr 1fr 36px;grid-template-areas:"d d x" "t v v" "c c c"}
- .erow.in{grid-template-areas:"d d x" "t v v" "c c c" "s s s"}.erow .esplit{grid-area:s}
  .erow .d{grid-area:d}.erow input[type=date]{grid-area:t}.erow .v{grid-area:v}.erow select{grid-area:c}.erow .icon{grid-area:x}}
+.mrow{display:grid;grid-template-columns:150px minmax(0,1fr) 170px 120px 130px 36px;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.mrow>input{font:16px var(--sans);color:var(--cocoa);padding:9px;border:1px solid var(--beige);border-radius:9px;background:var(--bg);width:100%;min-width:0}
+@media (min-width:900px){.mrow{grid-template-columns:1fr 1fr 36px;grid-template-areas:"d d x" "t v v" "f k k"}.mrow .d{grid-area:d}.mrow input[type=date]{grid-area:t}.mrow .v{grid-area:v}.mrow select[data-f=fund]{grid-area:f}.mrow select[data-f=type]{grid-area:k}.mrow .icon{grid-area:x}}
+@media (max-width:760px){.mrow{grid-template-columns:1fr 1fr 36px;grid-template-areas:"d d x" "t v v" "f k k"}.mrow .d{grid-area:d}.mrow input[type=date]{grid-area:t}.mrow .v{grid-area:v}.mrow select[data-f=fund]{grid-area:f}.mrow select[data-f=type]{grid-area:k}.mrow .icon{grid-area:x}}
+.goal{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+.ghead{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.gval{display:flex;align-items:baseline;gap:8px;margin-top:6px}.gval strong{font:700 1.9rem/1.1 var(--serif);font-variant-numeric:tabular-nums}.gval span{color:var(--muted);font-size:.9rem}
+.goal .prog{margin:10px 0 8px}
+table.hist-t{min-width:860px}.hist-t tr.on td,.hist-t tr.on th{background:var(--cream)}
 .frow{display:grid;grid-template-columns:minmax(0,1fr) 140px 36px;gap:8px;margin-bottom:8px}
 .empty.sm{padding:20px;margin:8px 0;color:var(--muted)}
 .prog{height:10px;background:var(--cream);border-radius:99px;overflow:hidden;margin:14px 0 10px}.prog div{height:100%;background:var(--ok);border-radius:99px}
@@ -140,7 +148,7 @@ table.cmp{border-collapse:collapse;width:100%;min-width:480px;font-size:.88rem;f
  main,.split{display:block;padding:0;max-width:none}.results{position:static;max-height:none;overflow:visible}.panel{border:0;padding:0}}
 </style></head><body>
 <header><div class="brand"><h1>Müller Atelier</h1><p>Simulador de precificação de bordados, kits e presentes</p></div><span id="saveState"></span></header>
-<nav aria-label="Seções"><div><button data-tab="kits">Kits e preços</button><button data-tab="products">Produtos</button><button data-tab="cash">Caixa do mês</button><button data-tab="platforms">Plataformas</button><button data-tab="team">Ajustes e backup</button></div></nav>
+<nav aria-label="Seções"><div><button data-tab="kits">Kits e preços</button><button data-tab="products">Produtos</button><button data-tab="cash">Caixa do mês</button><button data-tab="plan">Planejamento</button><button data-tab="platforms">Plataformas</button><button data-tab="team">Ajustes e backup</button></div></nav>
 <main id="view"></main><div id="toast" role="status" aria-live="polite"></div>
 <script>
 // ===== Núcleo de cálculo (puro, testável) =====
@@ -297,6 +305,14 @@ function migrate(s){
   if(!Array.isArray(s.entries)) s.entries=[];
   if(!s.cash||typeof s.cash!=='object') s.cash={};
   s.cash={fixed:[],withdraw:0,avgFee:20,...s.cash}; if(!Array.isArray(s.cash.fixed)) s.cash.fixed=[];
+  // Planejamento financeiro (adicionado depois): preenche o que faltar, sem mexer no resto
+  const pd=planDefaults();
+  if(!s.cash.plan||typeof s.cash.plan!=='object') s.cash.plan=pd;
+  else { const pl=s.cash.plan;
+    if(!Array.isArray(pl.buckets)) pl.buckets=pd.buckets; else pd.buckets.forEach(b=>{ if(!pl.buckets.some(x=>x.id===b.id)) pl.buckets.push(b); });
+    pl.hire={...pd.hire,...(pl.hire||{})}; pl.initial={...pd.initial,...(pl.initial||{})}; if(pl.boxGoal===undefined) pl.boxGoal=pd.boxGoal; }
+  if(!s.cash.months||typeof s.cash.months!=='object'||Array.isArray(s.cash.months)) s.cash.months={};
+  if(!Array.isArray(s.cash.moves)) s.cash.moves=[];
   s.cash.split={...{team:30,ads:10,keep:60},...((s.cash.split&&typeof s.cash.split==='object')?s.cash.split:{})};
   const ids=s.platforms.map(p=>p.id);
   if(!ids.includes(s.ui.platformId)) s.ui.platformId=ids[0];
@@ -307,7 +323,7 @@ function defaults(){
   const p1={id:'p-pano',name:'Pano de prato bordado com renda',material:20,other:0,bordado:100,costura:30,extraMin:0};
   const plats=researchedPlatforms(), shopee=plats[0];
   const kit=(id,name,q)=>({id,name,items:[{id:uid(),pid:p1.id,qty:q}],packaging:2,prep:0,otherCost:0,billable:1,discount:q>1?10:0,testPrice:''});
-  return {v:2,products:[p1],kits:[kit('k3','Kit 3 panos de prato',3),kit('k1','Pano de prato avulso',1),kit('k5','Kit 5 panos de prato',5)],platforms:plats,entries:[],cash:{fixed:[],withdraw:0,avgFee:20,split:{team:30,ads:10,keep:60}},
+  return {v:2,products:[p1],kits:[kit('k3','Kit 3 panos de prato',3),kit('k1','Pano de prato avulso',1),kit('k5','Kit 5 panos de prato',5)],platforms:plats,entries:[],cash:{fixed:[],withdraw:0,avgFee:20,split:{team:30,ads:10,keep:60},plan:planDefaults(),months:{},moves:[]},
     settings:{laborMode:'A',rate:20,margin:20,reserve:0,splitMode:'equal',people:[{id:uid(),name:'Pessoa 1',rate:20,timePct:100,share:50},{id:uid(),name:'Pessoa 2',rate:20,timePct:100,share:50}]},
     ui:{tab:'kits',kitId:'k3',platformId:shopee.id,productId:p1.id,editPlat:shopee.id,platTest:200,cmpQty:10,cmpPack:2,cmpDisc:10,month:monthOf(today())}};
 }
@@ -362,14 +378,16 @@ async function downloadText(name,text,mime){
 function keepCash(raw,s){
   if(!raw||!Array.isArray(raw.entries)) s.entries=JSON.parse(JSON.stringify(state.entries||[]));
   if(!raw||!raw.cash) s.cash=JSON.parse(JSON.stringify(state.cash));
-  else if(!raw.cash.split&&state.cash&&state.cash.split) s.cash.split=JSON.parse(JSON.stringify(state.cash.split));
+  else for(const k of ['split','plan','months','moves']) if(!(k in raw.cash)&&state.cash&&state.cash[k]!==undefined) s.cash[k]=JSON.parse(JSON.stringify(state.cash[k]));
   return s;
 }
-// kind: 'all' = tudo; 'config' = plataformas, equipe, margem e custos fixos
+const CASH_CONFIG_KEYS=['fixed','withdraw','avgFee','split','plan'];
+function cashConfig(c){ const o={}; CASH_CONFIG_KEYS.forEach(k=>{ if(c&&c[k]!==undefined) o[k]=JSON.parse(JSON.stringify(c[k])); }); return o; }
+// kind: 'all' = tudo; 'config' = plataformas, equipe, margem, custos fixos e metas
 async function exportJson(kind){
   const day=new Date().toISOString().slice(0,10), at=new Date().toISOString();
   const payload=kind==='config'
-    ? {app:'muller-atelier',type:'config',version:2,exportedAt:at,config:{platforms:state.platforms,settings:state.settings,cash:state.cash}}
+    ? {app:'muller-atelier',type:'config',version:2,exportedAt:at,config:{platforms:state.platforms,settings:state.settings,cash:cashConfig(state.cash)}}
     : {app:'muller-atelier',type:'full',version:2,exportedAt:at,state};
   const json=JSON.stringify(payload,null,2);
   const name=(kind==='config'?'muller-atelier-configuracoes-':'muller-atelier-backup-')+day+'.json';
@@ -383,7 +401,7 @@ async function importFile(file){
     if(!confirm('Substituir plataformas, equipe e margem pelas do arquivo? Seus produtos e kits continuam como estão.')) return;
     maybeBackup(JSON.stringify(state),true);
     const cur=JSON.parse(JSON.stringify(state));
-    const s=migrate({...cur,platforms:c.platforms,settings:c.settings,cash:(c.cash&&typeof c.cash==='object')?{...c.cash,split:c.cash.split||cur.cash.split}:cur.cash,v:2});
+    const s=migrate({...cur,platforms:c.platforms,settings:c.settings,cash:(c.cash&&typeof c.cash==='object')?{...cur.cash,...cashConfig(c.cash)}:cur.cash,v:2});
     state=s; save(); render(); toast('Configurações importadas'); return;
   }
   const raw=obj&&obj.state?obj.state:obj;
@@ -429,6 +447,12 @@ function setVal(col,id,f,v){
   else if(col==='people') o=S().people.find(p=>p.id===id);
   else if(col==='cash') o=state.cash;
   else if(col==='split') o=state.cash.split;
+  else if(col==='mrec'){ const m=state.ui.month; if(!state.cash.months[m]) state.cash.months[m]={revenue:'',fees:'',taxes:''}; o=state.cash.months[m]; }
+  else if(col==='bucket') o=state.cash.plan.buckets.find(b=>b.id===id);
+  else if(col==='hire') o=state.cash.plan.hire;
+  else if(col==='plan') o=state.cash.plan;
+  else if(col==='initial') o=state.cash.plan.initial;
+  else if(col==='moves') o=state.cash.moves.find(x=>x.id===id);
   else if(col==='fixed') o=state.cash.fixed.find(x=>x.id===id);
   else o=state[col].find(x=>x.id===id);
   if(o) o[f]=v;
@@ -438,7 +462,7 @@ function setVal(col,id,f,v){
 function render(){
   document.querySelectorAll('nav button').forEach(b=>b.setAttribute('aria-current',b.dataset.tab===state.ui.tab?'page':'false'));
   const v=document.getElementById('view');
-  v.innerHTML={kits:viewKits,products:viewProducts,cash:viewCash,platforms:viewPlatforms,team:viewTeam}[state.ui.tab]();
+  v.innerHTML={kits:viewKits,products:viewProducts,cash:viewCash,plan:viewPlan,platforms:viewPlatforms,team:viewTeam}[state.ui.tab]();
   renderResults();
 }
 function renderResults(){
@@ -446,8 +470,9 @@ function renderResults(){
   if(t==='kits'){ const e=document.getElementById('res'); if(e) e.innerHTML=kitResults(); }
   if(t==='products'){ state.products.forEach(p=>{const e=document.getElementById('ps-'+p.id); if(e) e.innerHTML=prodSummary(p);}); const c=document.getElementById('cmp'); if(c) c.innerHTML=compareTable(); }
   if(t==='platforms'){ const e=document.getElementById('platPrev'); if(e) e.innerHTML=platPreview(); }
+  if(t==='plan'){ const e=document.getElementById('planRes'); if(e) e.innerHTML=planResults(); const h=document.getElementById('hireGoal'); if(h) h.innerHTML=hireGoalText();
+    const c=document.getElementById('bucketChk'); if(c){ const t=bucketSum(); c.innerHTML=Math.abs(t-100)<0.001?'<p class="alert ok">Distribuição soma 100%.</p>':`<p class="alert loss">A distribuição soma ${t.toLocaleString('pt-BR')}%. Ajuste para 100%.</p>`; } }
   if(t==='cash'){ const e=document.getElementById('cashRes'); if(e) e.innerHTML=cashResults();
-    state.entries.forEach(x=>{ const el=document.getElementById('sp-'+x.id); if(el) el.innerHTML=splitLine(x); });
     const c=document.getElementById('splitChk'); if(c){ const t=splitSum(); c.innerHTML=Math.abs(t-100)<0.001?'<p class="alert ok">Divisão soma 100%.</p>':`<p class="alert loss">A divisão soma ${t.toLocaleString('pt-BR')}%. Ajuste para 100%.</p>`; } }
   if(t==='team'){ const e=document.getElementById('teamChk'); if(e) e.innerHTML=teamCheck(); const b=document.getElementById('bakList'); if(b) b.innerHTML=bakList(); }
 }
@@ -741,7 +766,7 @@ function viewCash(){
      <input type="text" class="d" aria-label="Descrição" placeholder="${e.type==='in'?'Ex.: Kit 3 panos, pedido 123':'Ex.: Tela de linho, 2 m'}" data-col="entries" data-id="${e.id}" data-f="desc" value="${esc(e.desc)}">
      <select aria-label="Categoria" data-col="entries" data-id="${e.id}" data-f="cat">${opts}</select>
      <div class="inwrap v"><i>${e.type==='in'?'+ R$':'− R$'}</i><input inputmode="decimal" aria-label="Valor" data-col="entries" data-id="${e.id}" data-f="amount" value="${esc(e.amount)}"></div>
-     <button class="icon" data-act="delEntry" data-id="${e.id}" aria-label="Excluir lançamento">✕</button>${e.type==='in'?`<small class="esplit" id="sp-${e.id}"></small>`:''}</div>`; };
+     <button class="icon" data-act="delEntry" data-id="${e.id}" aria-label="Excluir lançamento">✕</button></div>`; };
   const frow=x=>`<div class="frow"><input type="text" aria-label="Descrição do custo fixo" placeholder="Ex.: DAS do MEI" data-col="fixed" data-id="${x.id}" data-f="desc" value="${esc(x.desc)}">
      <div class="inwrap"><i>R$</i><input inputmode="decimal" aria-label="Valor mensal" data-col="fixed" data-id="${x.id}" data-f="amount" value="${esc(x.amount)}"></div>
      <button class="icon" data-act="delFixed" data-id="${x.id}" aria-label="Remover custo fixo">✕</button></div>`;
@@ -756,10 +781,6 @@ function viewCash(){
    <h3>Custos fixos todo mês</h3>
    <p class="note" style="margin:0 0 10px">Contas que se repetem: DAS do MEI, internet, aluguel, assinaturas.</p>
    ${c.fixed.map(frow).join('')}<button class="btn ghost sm" data-act="addFixed">+ Custo fixo</button>
-   <h3>Divisão do que entra</h3>
-   <p class="note" style="margin:0 0 10px">Cada entrada do mês é dividida assim. A parte da equipe é repartida igualmente entre as ${S().people.length} pessoas cadastradas em Ajustes.</p>
-   <div class="grid g4">${perc('split','','team',c.split.team,'Equipe (retirada)')}${perc('split','','ads',c.split.ads,'Anúncios (ads)')}${perc('split','','keep',c.split.keep,'Caixa do ateliê')}</div>
-   <div id="splitChk"></div>
    <h3>Meta de caixa</h3>
    <div class="grid">${money('cash','','withdraw',c.withdraw,'Retirada desejada no mês','O que a equipe quer tirar pelo trabalho')}${perc('cash','','avgFee',c.avgFee,'Taxa média das vendas','Para estimar quanto vender')}</div>
   </section><section id="cashRes" class="results"></section></div>`;
@@ -770,7 +791,7 @@ function cashResults(){
   const prog=d.goal>0?Math.min(1,d.received/d.goal):0;
   const hist=[...Array(6)].map((_,i)=>{ const x=shiftMonth(m,i-5); return {m:x,d:monthData(x)}; });
   const hmax=Math.max(1,...hist.map(h=>Math.max(h.d.spent,h.d.received)));
-  return splitPanel(m,d)+`<div class="panel"><h2>Meta de caixa do mês</h2>
+  return planTeaser(m)+`<div class="panel"><h2>Meta de caixa do mês</h2>
    <div class="hero"><span>Precisa entrar (líquido)</span><strong>${brl(d.goal)}</strong><span class="hsub">≈ ${brl(d.gross)} em vendas, com taxa média de ${num(state.cash.avgFee).toLocaleString('pt-BR')}%</span></div>
    <dl class="kv"><dt>Compras e gastos do mês</dt><dd>${brl(d.spent)}</dd><dt>Custos fixos</dt><dd>${brl(d.fixed)}</dd><dt>Retirada desejada</dt><dd>${brl(d.withdraw)}</dd><dt class="b">Meta</dt><dd class="b">${brl(d.goal)}</dd></dl>
    <div class="prog" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(prog*100)}" aria-label="Meta alcançada"><div style="width:${(prog*100).toFixed(1)}%"></div></div>
@@ -789,16 +810,145 @@ const csvNum=v=>round2(num(v)).toFixed(2).replace('.',',');
 async function exportCsv(scope){
   const m=state.ui.month;
   const E=state.entries.filter(e=>scope==='all'||monthOf(e.date)===m).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
-  const ppl=S().people, sp=state.cash.split;
-  const L=[['Data','Tipo','Descrição','Categoria','Valor (R$)',...ppl.map(p=>p.name),'Anúncios','Caixa'].map(csvCell).join(';')];
-  E.forEach(e=>{ const x=e.type==='in'?splitOf(e.amount):null;
-    L.push([e.date?e.date.split('-').reverse().join('/'):'',e.type==='in'?'Entrada':'Gasto',e.desc,e.cat,(e.type==='in'?'':'-')+csvNum(e.amount),
-      ...(x?[...x.persons.map(p=>csvNum(p.value)),csvNum(x.ads),csvNum(x.keep)]:[...ppl.map(()=>''),'',''])].map(csvCell).join(';')); });
+  const L=[['Data','Tipo','Descrição','Categoria','Valor (R$)'].join(';')];
+  E.forEach(e=>L.push([e.date?e.date.split('-').reverse().join('/'):'',e.type==='in'?'Entrada':'Gasto',e.desc,e.cat,(e.type==='in'?'':'-')+csvNum(e.amount)].map(csvCell).join(';')));
   if(scope!=='all'){ const d=monthData(m);
     L.push('',csvCell('Resumo de '+monthName(m)),...[['Gastos do mês',d.spent],['Custos fixos',d.fixed],['Retirada desejada',d.withdraw],['Meta de caixa',d.goal],['Entradas',d.received],['Saldo',d.balance]].map(([a,b])=>[a,'','','',csvNum(b)].join(';')));
-    const x=splitOf(d.received);
-    L.push('',csvCell('Divisão das entradas'),...x.persons.map(p=>[csvCell(p.name),'','','',csvNum(p.value)].join(';')),['Anúncios','','','',csvNum(x.ads)].join(';'),['Caixa do ateliê','','','',csvNum(x.keep)].join(';')); }
+    const f=monthFin(m);
+    L.push('',csvCell('Distribuição do lucro'),['Faturamento','','','',csvNum(f.revenue)].join(';'),['Custos e despesas','','','',csvNum(f.costs)].join(';'),['Lucro disponível','','','',csvNum(f.profit)].join(';'),
+      ...f.dist.map(b=>[csvCell(bucketName(b)+' ('+num(b.pct)+'%)'),'','','',csvNum(b.value)].join(';'))); }
   await downloadText((scope==='all'?'muller-atelier-caixa-completo':'muller-atelier-caixa-'+m)+'.csv','\ufeff'+L.join('\r\n'),'text/csv');
+}
+
+// ===== Planejamento financeiro =====
+function planDefaults(){ return {
+  buckets:[{id:'s1',kind:'person',idx:0,pct:15},{id:'s2',kind:'person',idx:1,pct:15},{id:'ads',kind:'ads',pct:10},{id:'hire',kind:'fund',pct:10},{id:'box',kind:'fund',pct:50}],
+  hire:{salary:1200,das:86,months:4,round:100},boxGoal:5000,initial:{hire:0,box:0}}; }
+const P=()=>state.cash.plan;
+function bucketName(b){
+  if(b.kind==='person'){ const p=S().people[b.idx]; return 'Retirada · '+(p&&p.name?p.name:'Sócia '+(b.idx+1)); }
+  return {ads:'Ads (publicidade)',hire:'Reserva para contratação',box:'Caixa da empresa'}[b.id]||b.id;
+}
+const bucketSum=()=>P().buckets.reduce((a,b)=>a+num(b.pct),0);
+function hireGoal(){ const h=P().hire, t=Math.max(0,num(h.months))*(num(h.salary)+num(h.das)), r=num(h.round)>0?num(h.round):1; return Math.ceil(t/r-1e-9)*r; }
+function hireGoalText(){ const h=P().hire, t=Math.max(0,num(h.months))*(num(h.salary)+num(h.das));
+  return `${num(h.months).toLocaleString('pt-BR')} × (${brl(num(h.salary))} + ${brl(num(h.das))}) = ${brl(t)}, arredondado para <b>${brl(hireGoal())}</b>`; }
+const hasRec=r=>!!r&&['revenue','fees','taxes'].some(k=>String(r[k]??'').trim()!=='');
+function monthFin(m){
+  const rec=state.cash.months[m]||{}, d=monthData(m), adsSpent=d.byCat[ADS_CAT]||0;
+  const manual=String(rec.revenue??'').trim()!=='';
+  const revenue=manual?num(rec.revenue):d.received, ops=d.spent-adsSpent, fees=num(rec.fees), taxes=num(rec.taxes);
+  const costs=ops+d.fixed+fees+taxes, profit=revenue-costs;
+  const dist=P().buckets.map(b=>({...b,value:profit>0?profit*num(b.pct)/100:0}));
+  const val=id=>(dist.find(x=>x.id===id)||{value:0}).value;
+  return {m,manual,entriesRev:d.received,revenue,ops,fixed:d.fixed,fees,taxes,costs,profit,dist,ads:val('ads'),hire:val('hire'),box:val('box'),adsSpent,deficit:profit<0?-profit:0};
+}
+function firstMonth(){
+  const ms=[...state.entries.map(e=>monthOf(e.date)),...Object.keys(state.cash.months).filter(k=>hasRec(state.cash.months[k])),...state.cash.moves.map(x=>monthOf(x.date))].filter(x=>/^\d{4}-\d{2}$/.test(x)).sort();
+  return ms[0]||null;
+}
+// Saldos das reservas até o fim do mês "upto". Lucro positivo deposita; prejuízo sai do caixa da empresa; a reserva de contratação nunca é usada automaticamente.
+function ledger(upto){
+  const init=P().initial, bal={hire:num(init.hire),box:num(init.box)}, rows=[], first=firstMonth();
+  if(first&&first<=upto) for(let m=first,i=0;m<=upto&&i<600;m=shiftMonth(m,1),i++){
+    const f=monthFin(m), mv={hire:{in:0,out:0},box:{in:0,out:0}};
+    state.cash.moves.filter(x=>monthOf(x.date)===m&&mv[x.fund]).forEach(x=>{ mv[x.fund][x.type==='in'?'in':'out']+=Math.max(0,num(x.amount)); });
+    bal.hire+=f.hire+mv.hire.in-mv.hire.out;
+    bal.box+=f.box+mv.box.in-mv.box.out-f.deficit;
+    rows.push({m,f,mv,bal:{...bal}});
+  }
+  return {bal,rows};
+}
+function goalCard(title,bal,goal,dep,extra){
+  const pc=goal>0?Math.max(0,bal)/goal:0, left=Math.max(0,goal-bal), done=bal>=goal&&goal>0;
+  const eta=!done&&dep>0?Math.ceil(left/dep):null;
+  return `<div class="goal"><div class="ghead"><b>${title}</b><span class="badge ${done?'ok':bal<0?'loss':'below'}">${done?'Meta atingida':(pc*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%'}</span></div>
+   <div class="gval"><strong class="${bal<0?'neg':''}">${brl(bal)}</strong><span>de ${brl(goal)}</span></div>
+   <div class="prog" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(Math.min(1,pc)*100)}" aria-label="${esc(title)}"><div style="width:${(Math.min(1,pc)*100).toFixed(1)}%"></div></div>
+   <p class="note" style="margin-top:0">${done?'Objetivo alcançado.':`Faltam <b>${brl(left)}</b>${eta?` · cerca de ${eta} ${eta===1?'mês':'meses'} no ritmo deste mês`:''}.`}${extra?' '+extra:''}</p></div>`;
+}
+function planTeaser(m){
+  const f=monthFin(m);
+  return `<div class="panel"><h2>Distribuição do lucro</h2><dl class="kv"><dt>Lucro disponível</dt><dd class="b ${f.profit<0?'neg':'pos'}">${brl(f.profit)}</dd>
+   ${f.dist.filter(b=>b.kind==='person').map(b=>`<dt>${esc(bucketName(b))}</dt><dd>${brl(b.value)}</dd>`).join('')}</dl>
+   <button class="btn ghost sm" style="margin-top:12px" data-tab="plan">Ver planejamento completo</button></div>`;
+}
+function viewPlan(){
+  const u=state.ui; if(!u.month) u.month=monthOf(today());
+  const m=u.month, rec=state.cash.months[m]||{}, d=monthData(m), pl=P();
+  const mv=state.cash.moves.filter(x=>monthOf(x.date)===m).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+  const mrow=x=>`<div class="mrow"><input type="date" aria-label="Data" data-col="moves" data-id="${x.id}" data-f="date" value="${esc(x.date)}">
+    <input type="text" class="d" aria-label="Descrição" placeholder="${x.type==='in'?'Ex.: aporte das sócias':'Ex.: compra de bastidores'}" data-col="moves" data-id="${x.id}" data-f="desc" value="${esc(x.desc)}">
+    <select aria-label="Reserva" data-col="moves" data-id="${x.id}" data-f="fund"><option value="box"${x.fund==='box'?' selected':''}>Caixa da empresa</option><option value="hire"${x.fund==='hire'?' selected':''}>Reserva p/ contratação</option></select>
+    <select aria-label="Tipo" data-col="moves" data-id="${x.id}" data-f="type"><option value="out"${x.type!=='in'?' selected':''}>Retirada</option><option value="in"${x.type==='in'?' selected':''}>Depósito</option></select>
+    <div class="inwrap v"><i>R$</i><input inputmode="decimal" aria-label="Valor" data-col="moves" data-id="${x.id}" data-f="amount" value="${esc(x.amount)}"></div>
+    <button class="icon" data-act="delMove" data-id="${x.id}" aria-label="Excluir movimentação">✕</button></div>`;
+  return `<div class="monthbar"><button class="icon" data-act="month" data-id="-1" aria-label="Mês anterior">‹</button><h2>${monthName(m)}</h2><button class="icon" data-act="month" data-id="1" aria-label="Próximo mês">›</button></div>
+  <div class="split"><section class="panel form">
+   <h2>Fechamento do mês</h2>
+   <p class="note" style="margin-top:0">Gastos e custos fixos vêm da aba Caixa do mês. Gastos na categoria Anúncios (ads) saem da verba de ads e não entram nos custos.</p>
+   <div class="grid">${inp('mrec','','revenue',rec.revenue??'',{label:'Faturamento do mês',pre:'R$',ph:csvNum(d.received),hint:'Em branco = soma das entradas lançadas'})}
+    ${money('mrec','','fees',rec.fees??'','Taxas dos marketplaces','Deixe 0 se as entradas já são líquidas')}${money('mrec','','taxes',rec.taxes??'','Impostos do mês')}</div>
+   <h3>Distribuição do lucro disponível</h3>
+   <div class="grid g4">${pl.buckets.map(b=>perc('bucket',b.id,'pct',b.pct,bucketName(b))).join('')}</div>
+   <div id="bucketChk"></div>
+   <p class="note">Os nomes das sócias vêm de Ajustes e backup.</p>
+   <h3>Meta 1 · Reserva para contratação</h3>
+   <div class="grid g4">${money('hire','','salary',pl.hire.salary,'Remuneração mensal')}${money('hire','','das',pl.hire.das,'Ajuda de custo (DAS)')}${inp('hire','','months',pl.hire.months,{label:'Meses de reserva',suf:'meses'})}${money('hire','','round',pl.hire.round,'Arredondar para múltiplo de')}</div>
+   <p class="note" id="hireGoal"></p>
+   <h3>Meta 2 · Caixa para materiais</h3>
+   <div class="grid">${money('plan','','boxGoal',pl.boxGoal,'Meta do caixa da empresa')}</div>
+   <h3>Saldos iniciais</h3>
+   <div class="grid">${money('initial','','hire',pl.initial.hire,'Reserva para contratação','Dinheiro que já estava guardado')}${money('initial','','box',pl.initial.box,'Caixa da empresa','Dinheiro que já estava guardado')}</div>
+   <h3>Movimentar as reservas</h3>
+   <p class="note" style="margin:0 0 10px">Use para compras grandes pagas com o caixa (não lance de novo como gasto) ou para aportes. A reserva de contratação é protegida.</p>
+   ${mv.length?mv.map(mrow).join(''):'<p class="empty sm">Nenhuma movimentação neste mês.</p>'}
+   <div class="btns" style="margin-top:10px"><button class="btn ghost sm" data-act="addMove" data-id="box-out">+ Retirada do caixa</button><button class="btn ghost sm" data-act="addMove" data-id="box-in">+ Depósito no caixa</button><button class="link" data-act="addMove" data-id="hire-in">+ Depósito na reserva</button><button class="link danger" data-act="addMove" data-id="hire-out">Retirada da reserva</button></div>
+  </section><section id="planRes" class="results"></section></div>`;
+}
+function planResults(){
+  const m=state.ui.month, L=ledger(m), f=monthFin(m), row=L.rows.find(r=>r.m===m)||{mv:{hire:{in:0,out:0},box:{in:0,out:0}}};
+  const goal1=hireGoal(), goal2=num(P().boxGoal), cur=monthOf(today())===m, sum=bucketSum();
+  const ppl=f.dist.filter(b=>b.kind==='person');
+  const hist=L.rows.slice(-12).reverse();
+  const B=id=>f.dist.find(x=>x.id===id)||{pct:0,value:0};
+  return `<div class="panel"><div class="shead"><h2>Resultado do mês</h2>${cur?'<span class="badge below">Em andamento</span>':''}</div>
+   <div class="hero"><span>${f.profit<0?'Prejuízo do mês':'Lucro disponível para distribuir'}</span><strong class="${f.profit<0?'neg':''}">${brl(f.profit)}</strong><span class="hsub">Faturamento ${brl(f.revenue)} − custos ${brl(f.costs)}</span></div>
+   <dl class="kv"><dt>Faturamento ${f.manual?'(informado)':'(entradas lançadas)'}</dt><dd>${brl(f.revenue)}</dd>
+    <dt>Materiais, embalagens e gastos</dt><dd>${brl(f.ops)}</dd><dt>Custos fixos</dt><dd>${brl(f.fixed)}</dd><dt>Taxas dos marketplaces</dt><dd>${brl(f.fees)}</dd><dt>Impostos</dt><dd>${brl(f.taxes)}</dd>
+    <dt class="b">Custos e despesas totais</dt><dd class="b">${brl(f.costs)}</dd></dl>
+   ${f.profit<0?`<div class="alert loss">Sem lucro para distribuir. O prejuízo de ${brl(f.deficit)} sai do caixa da empresa.</div>`:''}
+   ${Math.abs(sum-100)>0.001?`<div class="alert loss">A distribuição soma ${sum.toLocaleString('pt-BR')}%. Ajuste para 100%.</div>`:''}</div>
+  <div class="panel"><h2>Distribuição do lucro</h2>
+   <div class="ppl">${ppl.map(b=>`<div class="pcard"><b>${esc(bucketName(b).replace('Retirada · ',''))}</b><span class="note">Retirada · ${num(b.pct).toLocaleString('pt-BR')}%</span><div class="ptot">${brl(b.value)}</div></div>`).join('')}</div>
+   <dl class="kv" style="margin-top:14px"><dt>Ads (publicidade) · ${num(B('ads').pct).toLocaleString('pt-BR')}%</dt><dd class="b">${brl(f.ads)}</dd>
+    <dt>Gasto em ads lançado</dt><dd>${brl(f.adsSpent)}</dd><dt>${f.ads-f.adsSpent<0?'Passou da verba':'Ainda dá para investir'}</dt><dd class="${f.ads-f.adsSpent<0?'neg':'pos'}">${brl(Math.abs(f.ads-f.adsSpent))}</dd>
+    <dt>Reserva para contratação · ${num(B('hire').pct).toLocaleString('pt-BR')}%</dt><dd class="b">${brl(f.hire)}</dd>
+    <dt>Caixa da empresa · ${num(B('box').pct).toLocaleString('pt-BR')}%</dt><dd class="b">${brl(f.box)}</dd></dl></div>
+  <div class="panel"><h2>Metas financeiras</h2>
+   ${goalCard('Reserva para contratação',L.bal.hire,goal1,f.hire,'Protegida: só para pagar a futura colaboradora.')}
+   ${goalCard('Caixa para materiais',L.bal.box,goal2,f.box-f.deficit,'')}
+   <dl class="kv"><dt class="b">Total acumulado nas duas reservas</dt><dd class="b">${brl(L.bal.hire+L.bal.box)}</dd></dl>
+   <p class="note">Saldos no fim de ${monthName(m).toLowerCase()}.</p></div>
+  <div class="panel"><h2>Movimento das reservas no mês</h2>
+   <h3 style="margin-top:0">Caixa da empresa</h3><dl class="kv"><dt>Entrada: ${num(B('box').pct).toLocaleString('pt-BR')}% do lucro</dt><dd class="pos">${brl(f.box)}</dd>
+    ${row.mv.box.in?`<dt>Depósitos extras</dt><dd class="pos">${brl(row.mv.box.in)}</dd>`:''}${f.deficit?`<dt>Saída: cobertura do prejuízo</dt><dd class="neg">−${brl(f.deficit)}</dd>`:''}
+    ${row.mv.box.out?`<dt>Saídas: retiradas</dt><dd class="neg">−${brl(row.mv.box.out)}</dd>`:''}<dt class="b">Saldo acumulado</dt><dd class="b ${L.bal.box<0?'neg':''}">${brl(L.bal.box)}</dd></dl>
+   <h3>Reserva para contratação</h3><dl class="kv"><dt>Entrada: ${num(B('hire').pct).toLocaleString('pt-BR')}% do lucro</dt><dd class="pos">${brl(f.hire)}</dd>
+    ${row.mv.hire.in?`<dt>Depósitos extras</dt><dd class="pos">${brl(row.mv.hire.in)}</dd>`:''}${row.mv.hire.out?`<dt>Saídas: retiradas</dt><dd class="neg">−${brl(row.mv.hire.out)}</dd>`:''}
+    <dt class="b">Saldo acumulado</dt><dd class="b">${brl(L.bal.hire)}</dd></dl>
+   ${L.bal.box<0?'<div class="alert loss">O caixa da empresa está negativo: os gastos passaram do que foi guardado.</div>':''}</div>
+  <div class="panel"><h2>Histórico mensal</h2>
+   ${hist.length?`<div class="tablewrap"><table class="cmp hist-t"><thead><tr><th>Mês</th><th>Faturamento</th><th>Custos</th><th>Lucro</th>${ppl.map(b=>`<th>${esc(bucketName(b).replace('Retirada · ',''))}</th>`).join('')}<th>Ads</th><th>Reserva</th><th>Caixa</th><th>Saldo reserva</th><th>Saldo caixa</th></tr></thead><tbody>
+    ${hist.map(r=>`<tr${r.m===m?' class="on"':''}><th>${monthName(r.m).replace(' de ',' ')}</th><td>${brl(r.f.revenue)}</td><td>${brl(r.f.costs)}</td><td class="${r.f.profit<0?'neg':''}">${brl(r.f.profit)}</td>${r.f.dist.filter(b=>b.kind==='person').map(b=>`<td>${brl(b.value)}</td>`).join('')}<td>${brl(r.f.ads)}</td><td>${brl(r.f.hire)}</td><td>${brl(r.f.box-r.f.deficit)}</td><td>${brl(r.bal.hire)}</td><td>${brl(r.bal.box)}</td></tr>`).join('')}
+   </tbody></table></div>
+   <div class="btns"><button class="btn ghost sm" data-act="exportPlanCsv">Baixar histórico (.csv)</button></div>`:'<p class="note" style="margin:0">Lance entradas e gastos para começar o histórico.</p>'}</div>`;
+}
+async function exportPlanCsv(){
+  const m=state.ui.month, L=ledger(m), names=P().buckets.map(bucketName);
+  const H=['Mês','Faturamento','Custos e despesas','Lucro disponível',...names,'Cobertura de prejuízo','Retiradas do caixa','Depósitos no caixa','Retiradas da reserva','Depósitos na reserva','Saldo reserva contratação','Saldo caixa da empresa'];
+  const rows=[H.map(csvCell).join(';'),...L.rows.map(r=>[monthName(r.m),csvNum(r.f.revenue),csvNum(r.f.costs),csvNum(r.f.profit),...r.f.dist.map(b=>csvNum(b.value)),csvNum(r.f.deficit),csvNum(r.mv.box.out),csvNum(r.mv.box.in),csvNum(r.mv.hire.out),csvNum(r.mv.hire.in),csvNum(r.bal.hire),csvNum(r.bal.box)].map(csvCell).join(';'))];
+  await downloadText('muller-atelier-planejamento-ate-'+m+'.csv','\ufeff'+rows.join('\r\n'),'text/csv');
 }
 
 // ===== eventos =====
@@ -857,6 +1007,11 @@ function onClick(e){
     case 'addFixed': state.cash.fixed.push({id:uid(),desc:'',amount:''}); break;
     case 'delFixed': state.cash.fixed=state.cash.fixed.filter(x=>x.id!==id); break;
     case 'exportCsv': exportCsv(id); return;
+    case 'exportPlanCsv': exportPlanCsv(); return;
+    case 'addMove': { const [fund,type]=id.split('-');
+      if(fund==='hire'&&type==='out'&&!confirm('A reserva para contratação é protegida para pagar a futura colaboradora. Registrar uma retirada mesmo assim?')) return;
+      state.cash.moves.push({id:uid(),date:monthOf(today())===u.month?today():u.month+'-01',fund,type,desc:'',amount:''}); break; }
+    case 'delMove': { const x=state.cash.moves.find(v=>v.id===id); if(x&&(num(x.amount)||x.desc)&&!confirm('Excluir esta movimentação?')) return; state.cash.moves=state.cash.moves.filter(v=>v.id!==id); break; }
     case 'restoreBak': { const b=backups.find(x=>String(x.at)===id); let raw=null; try{ raw=JSON.parse(b.state); }catch(e){} const s0=b&&load(b.state); if(!s0){ toast('Cópia inválida'); return; } const s=keepCash(raw,s0);
       if(!confirm('Voltar para a cópia de '+new Date(b.at).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})+'? Os dados atuais também ficam guardados no histórico.')) return;
       maybeBackup(JSON.stringify(state),true); state=s; state.ui.tab='team'; toast('Cópia restaurada'); break; }
